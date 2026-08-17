@@ -441,7 +441,7 @@ SDL_Surface* CurrentBkgd(void)
 {
   if (!screen)
     return NULL;
-  if (screen->flags & SDL_FULLSCREEN)
+  if (window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
     return fullscr_bkgd;
   else
     return win_bkgd;

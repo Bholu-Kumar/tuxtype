@@ -435,42 +435,41 @@ void DarkenScreen(Uint8 bits)
 
 void SwitchScreenMode(void)
 {
-  int window = (screen->flags & SDL_FULLSCREEN);
-  SDL_Surface* oldscreen = screen;
+  Uint32 wflags = window ? SDL_GetWindowFlags(window) : 0;
+  int is_fs = (wflags & SDL_WINDOW_FULLSCREEN) != 0;
 
-  if (!window)
+  if (window)
   {
-    screen = SDL_SetVideoMode(fs_res_x,
-                              fs_res_y,
-                              BPP,
-                              SDL_FULLSCREEN);
-  }
-  else
-  {
-    screen = SDL_SetVideoMode(RES_X,
-                              RES_Y,
-                              BPP,
-                              0);
-
+    if (!is_fs)
+    {
+      SDL_SetWindowFullscreen(window, SDL_WINDOW_FULLSCREEN);
+    }
+    else
+    {
+      SDL_SetWindowFullscreen(window, 0);
+      SDL_SetWindowSize(window, RES_X, RES_Y);
+    }
   }
 
+  int w = RES_X, h = RES_Y;
+  if (window)
+  {
+    SDL_GetWindowSize(window, &w, &h);
+  }
+
+  if (screen)
+    SDL_DestroySurface(screen);
+
+  screen = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB8888);
   if (screen == NULL)
   {
     fprintf(stderr,
             "\nError: I could not switch to %s mode.\n"
             "The Simple DirectMedia error that occured was:\n"
             "%s\n\n",
-            window ? "windowed" : "fullscreen",
+            is_fs ? "windowed" : "fullscreen",
             SDL_GetError());
-    screen = oldscreen;
   }
-  else
-  {
-    SDL_FreeSurface(oldscreen);
-    oldscreen = NULL;
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
-  }
-
 }
 
 

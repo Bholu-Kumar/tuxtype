@@ -31,6 +31,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "SDL_extras.h"
 
 
+SDL_Window* window = NULL;
+SDL_Renderer* renderer = NULL;
+SDL_Surface* screen = NULL;
+
 int fs_res_x = 0;
 int fs_res_y = 0;
 
@@ -45,14 +49,12 @@ static int load_settings_filename(const char* fn);
 void GraphicsInit(void)
 {
   SDL_DisplayMode mode;
+  Uint32 window_flags = 0;
+  int w = RES_X;
+  int h = RES_Y;
 
   DEBUGCODE
   { fprintf(stderr, "Entering GraphicsInit()\n"); };
-
-  //Set application's icon:
-  seticon();
-  //Set caption:
-  SDL_WM_SetCaption("Tux Typing", "TuxType");
 
   // Determine the current resolution: this will be used as the
   // fullscreen resolution, if the user wants fullscreen.
@@ -75,39 +77,63 @@ void GraphicsInit(void)
 
   if (settings.fullscreen == 1)
   {
-    screen = SDL_SetVideoMode(fs_res_x, fs_res_y, BPP, SDL_FULLSCREEN);
-    if (screen == NULL)
-    {
-      fprintf(stderr,
+    window_flags |= SDL_WINDOW_FULLSCREEN;
+    w = fs_res_x;
+    h = fs_res_y;
+  }
+
+  window = SDL_CreateWindow("Tux Typing", w, h, window_flags);
+  if (!window && (window_flags & SDL_WINDOW_FULLSCREEN))
+  {
+    fprintf(stderr,
             "\nWarning: I could not open the display in fullscreen mode.\n"
             "The Simple DirectMedia error that occured was:\n"
             "%s\n\n", SDL_GetError());
-      settings.fullscreen = 0;
-    }
+    settings.fullscreen = 0;
+    window_flags &= ~SDL_WINDOW_FULLSCREEN;
+    w = RES_X;
+    h = RES_Y;
+    window = SDL_CreateWindow("Tux Typing", w, h, window_flags);
   }
 
-  /* Either fullscreen not requested, or couldn't get fullscreen in SDL: */
-  if (settings.fullscreen == 0)
-  {
-    screen = SDL_SetVideoMode(RES_X, RES_Y, BPP, 0);
-  }
-
-  /* Failed to get a usable screen - must bail out! */
-  if (screen == NULL)
+  if (!window)
   {
     fprintf(stderr,
-          "\nError: I could not open the display.\n"
+          "\nError: I could not open the display window.\n"
           "The Simple DirectMedia error that occured was:\n"
           "%s\n\n", SDL_GetError());
     exit(2);
   }
+
+  renderer = SDL_CreateRenderer(window, NULL);
+  if (!renderer)
+  {
+    fprintf(stderr,
+          "\nError: I could not create the renderer.\n"
+          "The Simple DirectMedia error that occured was:\n"
+          "%s\n\n", SDL_GetError());
+    exit(2);
+  }
+
+  screen = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB8888);
+  if (!screen)
+  {
+    fprintf(stderr,
+          "\nError: I could not create the software screen surface.\n"
+          "The Simple DirectMedia error that occured was:\n"
+          "%s\n\n", SDL_GetError());
+    exit(2);
+  }
+
+  //Set application's icon:
+  seticon();
 
   InitBlitQueue();
 
   DEBUGCODE 
   {
     fprintf(stderr, "-SDL VidMode successfully set to %ix%i\n",
-            fs_res_x, fs_res_y);
+            w, h);
   }
 
 	LOG( "GraphicsInit():END\n" );
@@ -616,7 +642,6 @@ DEBUGCODE
 static void seticon(void)
 {
   SDL_Surface* icon;
-  int colorkey;
 
   /* Load icon into a surface: */
   icon = IMG_Load(DATA_PREFIX "/images/icons/icon.png");
@@ -629,20 +654,30 @@ static void seticon(void)
     return;
   }
 
-  /* Set up key for transparency: */
-  colorkey = SDL_MapRGB(icon->format, 255, 0, 255);
-  SDL_SetColorKey(icon, SDL_SRCCOLORKEY, colorkey);              
+  if (window)
+    SDL_SetWindowIcon(window, icon);
 
-  SDL_WM_SetIcon(icon,NULL);
-
-  SDL_FreeSurface(icon);
+  SDL_DestroySurface(icon);
 }
 
 
 void Cleanup(void)
 {
-  SDL_FreeSurface(screen);
-  screen = NULL;
+  if (screen)
+  {
+    SDL_DestroySurface(screen);
+    screen = NULL;
+  }
+  if (renderer)
+  {
+    SDL_DestroyRenderer(renderer);
+    renderer = NULL;
+  }
+  if (window)
+  {
+    SDL_DestroyWindow(window);
+    window = NULL;
+  }
   Cleanup_SDL_Text();
   SDL_Quit();
 }

@@ -163,6 +163,8 @@ extern struct braille_dict braille_key_value_map[100];
 /* Goal is to have all global settings here */
 /* FIXME get rid of as much global data as possible, esp. pointers */
 extern game_option_type settings;
+extern SDL_Window* window;
+extern SDL_Renderer* renderer;
 extern SDL_Surface* screen;
 extern SDL_Event  event;
 
