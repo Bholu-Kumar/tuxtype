@@ -395,10 +395,10 @@ int unicode_in_key_list(wchar_t uni_char)
 // 	while (!stop) 
 // 		while (SDL_PollEvent(&event)) 
 // 			switch (event.type) {
-// 				case SDL_QUIT:
+// 				case SDL_EVENT_QUIT:
 // 					exit(0);
-// 				case SDL_KEYDOWN:
-// 				case SDL_MOUSEBUTTONDOWN:
+// 				case SDL_EVENT_KEY_DOWN:
+// 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
 // 					stop = 1;
 // 			}
 // 

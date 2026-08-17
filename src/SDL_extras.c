@@ -26,21 +26,13 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-/* For TransWipe(): */
-enum
-{
-  WIPE_BLINDS_VERT,
-  WIPE_BLINDS_HORIZ,
-  WIPE_BLINDS_BOX,
-  RANDOM_WIPE,
-  NUM_WIPES
-};
+
 
 #include <math.h>
 
 #include "convert_utf.h"
-#include "SDL_extras.h"
 #include "globals.h"
+#include "SDL_extras.h"
 #include "pixels.h"
 //Just need funcs.h for CurrentBkgd()
 #include "funcs.h"
@@ -67,7 +59,7 @@ void DrawButton(SDL_Rect* target_rect,
                                           target_rect->h,
                                           32,
                                           rmask, gmask, bmask, amask);
-  Uint32 color = SDL_MapRGBA(tmp_surf->format, r, g, b, a);
+  Uint32 color = SDL_MapSurfaceRGBA(tmp_surf, r, g, b, a);
   SDL_FillRect(tmp_surf, NULL, color);
   RoundCorners(tmp_surf, radius);
 
@@ -87,10 +79,10 @@ void RoundCorners(SDL_Surface* s, Uint16 radius)
 
   if (!s)
     return;
-  if (SDL_LockSurface(s) == -1)
+  if (!SDL_LockSurface(s))
     return;
 
-  bytes_per_pix = s->format->BytesPerPixel;
+  bytes_per_pix = SDL_BYTESPERPIXEL(s->format);
   if (bytes_per_pix != 4)
     return;
 
@@ -101,7 +93,8 @@ void RoundCorners(SDL_Surface* s, Uint16 radius)
     radius = (s->h)/2;
 
 
-  alpha_mask = s->format->Amask;
+  const SDL_PixelFormatDetails *details = SDL_GetPixelFormatDetails(s->format);
+  alpha_mask = details ? details->Amask : amask;
 
   /* Now round off corners: */
   /* upper left:            */
@@ -186,27 +179,14 @@ void RoundCorners(SDL_Surface* s, Uint16 radius)
      note: you can have it flip both
 **********************/
 SDL_Surface* Flip( SDL_Surface *in, int x, int y ) {
-        SDL_Surface *out, *tmp;
+        SDL_Surface *out;
         SDL_Rect from_rect, to_rect;
-        Uint32        flags;
-        Uint32  colorkey=0;
+        Uint32 colorkey = 0;
+        bool has_colorkey = SDL_GetColorKey(in, &colorkey);
 
-        /* --- grab the settings for the incoming pixmap --- */
-
-        SDL_LockSurface(in);
-        flags = in->flags;
-
-        /* --- change in's flags so ignore colorkey & alpha --- */
-
-        if (flags & SDL_SRCCOLORKEY) {
-                in->flags &= ~SDL_SRCCOLORKEY;
-                colorkey = in->format->colorkey;
+        if (has_colorkey) {
+                SDL_SetColorKey(in, false, 0);
         }
-        if (flags & SDL_SRCALPHA) {
-                in->flags &= ~SDL_SRCALPHA;
-        }
-
-        SDL_UnlockSurface(in);
 
         /* --- create our new surface --- */
 
@@ -246,30 +226,12 @@ SDL_Surface* Flip( SDL_Surface *in, int x, int y ) {
                 } while (to_rect.y >= 0);
         }
 
-        /* --- restore colorkey & alpha on in and setup out the same --- */
+        /* --- restore colorkey --- */
 
-        SDL_LockSurface(in);
-
-        if (flags & SDL_SRCCOLORKEY) {
-                in->flags |= SDL_SRCCOLORKEY;
-                in->format->colorkey = colorkey;
-                tmp = SDL_DisplayFormat(out);
-                SDL_FreeSurface(out);
-                out = tmp;
-                out->flags |= SDL_SRCCOLORKEY;
-                out->format->colorkey = colorkey;
-        } else if (flags & SDL_SRCALPHA) {
-                in->flags |= SDL_SRCALPHA;
-                tmp = SDL_DisplayFormatAlpha(out);
-                SDL_FreeSurface(out);
-                out = tmp;
-        } else {
-                tmp = SDL_DisplayFormat(out);
-                SDL_FreeSurface(out);
-                out = tmp;
+        if (has_colorkey) {
+                SDL_SetColorKey(in, true, colorkey);
+                SDL_SetColorKey(out, true, colorkey);
         }
-
-        SDL_UnlockSurface(in);
 
         return out;
 }
@@ -283,7 +245,7 @@ SDL_Surface* Flip( SDL_Surface *in, int x, int y ) {
    generalized to other image types. */
 SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
 {
-  SDL_PixelFormat *fmt1, *fmt2;
+  SDL_PixelFormat fmt1, fmt2;
   Uint8 r1, r2, g1, g2, b1, b2, a1, a2;
   SDL_Surface *tmpS, *ret;
   Uint32 *cpix1, *epix1, *cpix2, *epix2;
@@ -292,7 +254,7 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
   if (!S1)
     return NULL;
 
-  fmt1 = fmt2 = NULL;
+  fmt1 = fmt2 = 0;
   tmpS = ret = NULL;
 
   gamflip = 1.0 - gamma;
@@ -304,7 +266,7 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
 
   fmt1 = S1->format;
 
-  if (fmt1 && fmt1->BitsPerPixel != 32)
+  if (SDL_BITSPERPIXEL(fmt1) != 32)
   {
     perror("This works only with RGBA images");
     return S1;
@@ -312,7 +274,7 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
   if (S2 != NULL)
   {
     fmt2 = S2->format;
-    if (fmt2->BitsPerPixel != 32)
+    if (SDL_BITSPERPIXEL(fmt2) != 32)
     {
       perror("This works only with RGBA images");
       return S1;
@@ -327,13 +289,13 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
     }
   }
 
-  tmpS = SDL_ConvertSurface(S1, fmt1, 0);
+  tmpS = SDL_ConvertSurface(S1, fmt1);
   if (tmpS == NULL)
   {
     perror("SDL_ConvertSurface() failed");
     return S1; 
   }
-  if (-1 == SDL_LockSurface(tmpS))
+  if (!SDL_LockSurface(tmpS))
   {
     perror("SDL_LockSurface() failed");
     return S1; 
@@ -347,7 +309,7 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
   epix1 = (Uint32*) tmpS->pixels - 1;
   cpix1 = epix1 + tmpS->w * tmpS->h;
   if (S2 != NULL
-      && (SDL_LockSurface(S2) != -1))
+      && SDL_LockSurface(S2))
   {
     epix2 = (Uint32*) S2->pixels - 1;
     cpix2 = epix2 + S2->w * S2->h;
@@ -358,19 +320,22 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
     cpix2 = cpix1;
   }
 
+  const SDL_PixelFormatDetails *d_fmt1 = SDL_GetPixelFormatDetails(fmt1);
+  const SDL_PixelFormatDetails *d_fmt2 = SDL_GetPixelFormatDetails(fmt2);
+
   for (; cpix1 > epix1; cpix1--, cpix2--)
   {
-    SDL_GetRGBA(*cpix1, fmt1, &r1, &g1, &b1, &a1);
+    SDL_GetRGBA(*cpix1, d_fmt1, &r1, &g1, &b1, &a1);
     a1 = gamma * a1;
     if (S2 != NULL && cpix2 > epix2)
     {
-      SDL_GetRGBA(*cpix2, fmt2, &r2, &g2, &b2, &a2);
+      SDL_GetRGBA(*cpix2, d_fmt2, &r2, &g2, &b2, &a2);
       r1 = gamma * r1 + gamflip * r2;
       g1 = gamma * g1 + gamflip * g2;
       b1 = gamma * b1 + gamflip * b2;
       a1 += gamflip * a2;
     }
-    *cpix1 = SDL_MapRGBA(fmt1,r1,g1,b1,a1);
+    *cpix1 = SDL_MapRGBA(d_fmt1, r1, g1, b1, a1);
   }
 
   SDL_UnlockSurface(tmpS);
@@ -409,9 +374,10 @@ void DarkenScreen(Uint8 bits)
   return;
 #endif
 
-  Uint32 rm = screen->format->Rmask;
-  Uint32 gm = screen->format->Gmask;
-  Uint32 bm = screen->format->Bmask;
+  const SDL_PixelFormatDetails *fmt = SDL_GetPixelFormatDetails(screen->format);
+  Uint32 rm = fmt ? fmt->Rmask : rmask;
+  Uint32 gm = fmt ? fmt->Gmask : gmask;
+  Uint32 bm = fmt ? fmt->Bmask : bmask;
   int x, y;
 
   /* (realistically, 1 and 2 are the only useful values) */
@@ -478,8 +444,8 @@ int WaitForKeypress(void)
   SDL_Event evt;
   while (1)
     while (SDL_PollEvent(&evt) )
-      if (evt.type == SDL_KEYDOWN)
-        return evt.key.keysym.sym;
+      if (evt.type == SDL_EVENT_KEY_DOWN)
+        return evt.key.key;
       else SDL_Delay(50);
 }
 /* Swiped shamelessly from TuxPaint
@@ -511,12 +477,7 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
 
   /* Create surface for zoom: */
 
-  s = SDL_CreateRGBSurface(0,        /* SDL_SWSURFACE, */
-                           new_w, new_h, src->format->BitsPerPixel,
-                           src->format->Rmask,
-                           src->format->Gmask,
-                           src->format->Bmask,
-                           src->format->Amask);
+  s = SDL_CreateSurface(new_w, new_h, src->format);
 
   if (s == NULL)
   {
@@ -531,8 +492,11 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
 
   /* Now assign function pointers to correct functions based */
   /* on data format of original and zoomed surfaces:         */
-  getpixel = getpixels[src->format->BytesPerPixel];
-  putpixel = putpixels[s->format->BytesPerPixel];
+  getpixel = getpixels[SDL_BYTESPERPIXEL(src->format)];
+  putpixel = putpixels[SDL_BYTESPERPIXEL(s->format)];
+
+  const SDL_PixelFormatDetails *src_details = SDL_GetPixelFormatDetails(src->format);
+  const SDL_PixelFormatDetails *s_details = SDL_GetPixelFormatDetails(s->format);
 
   SDL_LockSurface(src);
   SDL_LockSurface(s);
@@ -566,13 +530,13 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
       one_minus_y = 1.0 - fraction_y;
 
       /* Grab their values:  */
-      SDL_GetRGBA(getpixel(src, floor_x, floor_y), src->format,
+      SDL_GetRGBA(getpixel(src, floor_x, floor_y), src_details,
                   &r1, &g1, &b1, &a1);
-      SDL_GetRGBA(getpixel(src, ceil_x,  floor_y), src->format,
+      SDL_GetRGBA(getpixel(src, ceil_x,  floor_y), src_details,
                   &r2, &g2, &b2, &a2);
-      SDL_GetRGBA(getpixel(src, floor_x, ceil_y),  src->format,
+      SDL_GetRGBA(getpixel(src, floor_x, ceil_y),  src_details,
                   &r3, &g3, &b3, &a3);
-      SDL_GetRGBA(getpixel(src, ceil_x,  ceil_y),  src->format,
+      SDL_GetRGBA(getpixel(src, ceil_x,  ceil_y),  src_details,
                   &r4, &g4, &b4, &a4);
 
       /* Create the weighted averages: */
@@ -593,7 +557,7 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
       a = (one_minus_y * n1 + fraction_y * n2);
 
       /* and put them into our new surface: */
-      putpixel(s, x, y, SDL_MapRGBA(s->format, r, g, b, a));
+      putpixel(s, x, y, SDL_MapRGBA(s_details, r, g, b, a));
 
     }
   }
@@ -614,7 +578,7 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
  * that wipe requires, will perform a wipe from
  * the current screen image to a new one.
  */
-int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
+int TransWipe(SDL_Surface* newbkg, int type, int segments, int duration)
 {
   int i, j, x1, x2, y1, y2;
   int step1, step2, step3, step4;
@@ -690,7 +654,7 @@ int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
       src.w = screen->w;
       src.h = screen->h;
       SDL_BlitSurface(newbkg, NULL, screen, &src);
-      SDL_Flip(screen);
+      T4K_PresentScreen();
 
       break;
     } 
@@ -729,7 +693,7 @@ int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
       src.w = screen->w;
       src.h = screen->h;
       SDL_BlitSurface(newbkg, NULL, screen, &src);
-      SDL_Flip(screen);
+      T4K_PresentScreen();
 
       break;
     }
@@ -784,7 +748,7 @@ int TransWipe(const SDL_Surface* newbkg, int type, int segments, int duration)
       src.w = screen->w;
       src.h = screen->h;
       SDL_BlitSurface(newbkg, NULL, screen, &src);
-      SDL_Flip(screen);
+      T4K_PresentScreen();
 
       break;
     }
@@ -1031,7 +995,7 @@ void UpdateScreen(int* frame)
 //  if (SNOW_on) 
 //    SDL_UpdateRects(screen, SNOW_add( (SDL_Rect*)&dstupdate, numupdates ), SNOW_rects);
 //  else 
-    SDL_UpdateRects(screen, numupdates, dstupdate);
+    T4K_PresentScreen();
 
   numupdates = 0;
   *frame = *frame + 1;
@@ -1206,7 +1170,7 @@ int Setup_SDL_Text(void)
 /* using SDL_ttf: */
   LOG("Setup_SDL_Text() - using SDL_ttf\n");
 
-  if (TTF_Init() < 0)
+  if (!TTF_Init())
   {
     fprintf(stderr, "\nError: I could not initialize SDL_ttf\n");
     return 0;
@@ -1302,7 +1266,7 @@ DEBUGCODE
                              32,
                              rmask, gmask, bmask, amask);
   /* Use color key for eventual transparency: */
-  color_key = SDL_MapRGB(bg->format, 01, 01, 01);
+  color_key = SDL_MapSurfaceRGB(bg, 01, 01, 01);
   SDL_FillRect(bg, NULL, color_key);
 
   /* Now draw black outline/shadow 2 pixels on each side: */
@@ -1348,7 +1312,7 @@ DEBUGCODE
   SDL_FreeSurface(white_letters);
 
   /* --- Convert to the screen format for quicker blits --- */
-  SDL_SetColorKey(bg, SDL_SRCCOLORKEY|SDL_RLEACCEL, color_key);
+  SDL_SetColorKey(bg, true, color_key);
   out = SDL_DisplayFormatAlpha(bg);
   SDL_FreeSurface(bg);
 
@@ -1643,6 +1607,26 @@ static TTF_Font* load_font(const char* font_name, int font_size)
     fprintf(stderr, "LoadFont(): Error - couldn't load either selected or default font\n");
     return NULL;
   }
+}
+
+/* Replicates legacy SDL_mixer semantics (negative volume = query current value without changing it)
+   on top of SDL3_mixer's float-gain API. Channel argument is ignored since volume is currently
+   a single global control (see earlier FIXME in t4k_audio.c). */
+int Mix_VolumeMusic(int vol)
+{
+    if (vol < 0)
+        return (int)(T4K_AudioGetGlobalVolume() * 128.0f);
+    T4K_AudioSetGlobalVolume(vol / 128.0f);
+    return vol;
+}
+
+int Mix_Volume(int channel, int vol)
+{
+    (void)channel; /* merged into one global control, see earlier note */
+    if (vol < 0)
+        return (int)(T4K_AudioGetGlobalVolume() * 128.0f);
+    T4K_AudioSetGlobalVolume(vol / 128.0f);
+    return vol;
 }
 
 #endif

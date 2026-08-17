@@ -50,6 +50,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_mixer/SDL_mixer.h>
 #include "globals.h"
+#include "SDL_extras.h"
 
 
 #ifndef MACOSX
@@ -102,13 +103,14 @@ extern SDL_Event  event;
 void          TitleScreen(void);
 int           RenderTitleScreen(void);
 void          DrawTitleScreen(void);
-int           HandleTitleScreenEvents(const SDL_Event* evt);
-int           HandleTitleScreenResSwitch(int new_w, int new_h);
+int           HandleTitleScreenEvents(SDL_Event* evt);
+void          HandleTitleScreenResSwitch(int new_w, int new_h);
 void          HandleTitleScreenAnimations();
 void          HandleTitleScreenAnimations_Reset(bool reset);
 void          ShowMessage(int font_size, const char* str1, const char* str2, const char* str3, const char* str4);
 void          ShowMessageWrap( int font_size, const char* str );
 SDL_Surface*  current_bkg(); //appropriate background for current video mode
+int           load_sound_data(void);
 
 
 /* in audio.c  (from tuxtype): */

@@ -343,11 +343,11 @@ int XMLLesson(void)
     {
       switch (event.type)
       {
-        case SDL_QUIT:
+        case SDL_EVENT_QUIT:
           return 0; /* Return control to the main program so we can exit cleanly */
           break;
 
-        case SDL_MOUSEMOTION:
+        case SDL_EVENT_MOUSE_MOTION:
           for (i = 0; (i < 8) && (loc - (loc % 8) + i < num_scripts); i++)
             if (inRect(titleRects[i], event.motion.x, event.motion.y ))
             {
@@ -356,7 +356,7 @@ int XMLLesson(void)
             }
           break;
 
-        case SDL_MOUSEBUTTONDOWN:
+        case SDL_EVENT_MOUSE_BUTTON_DOWN:
           if (inRect( leftRect, event.button.x, event.button.y ))
           {
             if (loc - (loc % 8) - 8 >= 0)
@@ -403,14 +403,14 @@ int XMLLesson(void)
 
           break;
 
-        case SDL_KEYDOWN:
-          if (event.key.keysym.sym == SDLK_ESCAPE)
+        case SDL_EVENT_KEY_DOWN:
+          if (event.key.key == SDLK_ESCAPE)
           {
             stop = 2;
             break;
           }
 
-          if (event.key.keysym.sym == SDLK_RETURN)
+          if (event.key.key == SDLK_RETURN)
           {
               /* If braille is not enabled or scripts_braille folder does not exist
                * then select the default path */
@@ -431,31 +431,31 @@ int XMLLesson(void)
 			  break;
           }
 
-          if ((event.key.keysym.sym == SDLK_LEFT)
-           || (event.key.keysym.sym == SDLK_PAGEUP))
+          if ((event.key.key == SDLK_LEFT)
+           || (event.key.key == SDLK_PAGEUP))
           {
             if (loc - (loc % 8) - 8 >= 0)
               loc = loc - (loc % 8) - 8;
           }
 
-          if ((event.key.keysym.sym == SDLK_RIGHT)
-           || (event.key.keysym.sym == SDLK_PAGEDOWN))
+          if ((event.key.key == SDLK_RIGHT)
+           || (event.key.key == SDLK_PAGEDOWN))
           {
             if (loc - (loc % 8) + 8 < num_scripts)
               loc = (loc - (loc % 8) + 8);
           }
 
-          if ((event.key.keysym.sym == SDLK_UP)
+          if ((event.key.key == SDLK_UP)
 	     ||
-	      (event.key.keysym.sym == SDLK_k))
+	      (event.key.key == SDLK_k))
           {
             if (loc > 0)
               loc--;
           }
 
-          if ((event.key.keysym.sym == SDLK_DOWN)
+          if ((event.key.key == SDLK_DOWN)
 	     ||
-	      (event.key.keysym.sym == SDLK_j))
+	      (event.key.key == SDLK_j))
           {
             if (loc + 1 < num_scripts)
               loc++;           
@@ -493,7 +493,7 @@ int XMLLesson(void)
       if (start + 8 < num_scripts)
         SDL_BlitSurface(right, NULL, screen, &rightRect);
 
-      SDL_UpdateRect(screen, 0, 0, 0 ,0);
+      T4K_PresentScreen();
     }
 
     SDL_Delay(40);
@@ -1446,7 +1446,7 @@ static void run_script(void)
           int done = 0;
 
           // Make sure everything is on screen 
-          SDL_Flip(screen);
+          T4K_PresentScreen();
           
           /* Announce the lesson instruction */
 		  T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,"%s",tts_buffer);
@@ -1460,7 +1460,7 @@ static void run_script(void)
             {
               switch (event.type)
               {
-                case SDL_MOUSEBUTTONDOWN:
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
                 {
                   int j;
 
@@ -1474,16 +1474,16 @@ static void run_script(void)
                   break;
                 }
 
-                case SDL_QUIT:
+                case SDL_EVENT_QUIT:
                 {
                   curPage = NULL;
                   done = 1;
                   break;
                 }
 
-                case SDL_KEYDOWN: 
+                case SDL_EVENT_KEY_DOWN: 
                 {
-                  switch (event.key.keysym.sym)
+                  switch (event.key.key)
                   {
                     case SDLK_ESCAPE: 
                       curPage = NULL;
@@ -1524,7 +1524,7 @@ static void run_script(void)
           
           
           // Make sure everything is on screen 
-          SDL_Flip(screen);
+          T4K_PresentScreen();
           
           
 
@@ -1535,16 +1535,16 @@ static void run_script(void)
             {
               switch (event.type)
               {
-                case SDL_QUIT:
+                case SDL_EVENT_QUIT:
                 {
                   curPage = NULL;
                   done = 1;
                   break;
                 }
 
-                case SDL_KEYDOWN: 
+                case SDL_EVENT_KEY_DOWN: 
                 {
-                  switch (event.key.keysym.sym)
+                  switch (event.key.key)
                   {
                     case SDLK_ESCAPE: 
                     {
@@ -1607,7 +1607,7 @@ static void run_script(void)
     }
     
     
-    SDL_Flip(screen);
+    T4K_PresentScreen();
     SDL_Delay(30);
         
         

@@ -177,7 +177,7 @@ void TitleScreen(void)
     start_time = SDL_GetTicks();
 
     /* display the Standby screen */
-    SDL_FillRect(screen, NULL, SDL_MapRGB(screen->format, 0, 0, 0));
+    SDL_FillRect(screen, NULL, SDL_MapSurfaceRGB(screen, 0, 0, 0));
 
     logo = T4K_LoadImage(standby_path, IMG_REGULAR);
     if(logo)
@@ -192,7 +192,7 @@ void TitleScreen(void)
         SDL_FreeSurface(logo);
     }
 
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    T4K_PresentScreen();
 
     /* Play "harp" greeting sound lifted from Tux Paint */
     playsound(SND_HARP);
@@ -227,8 +227,8 @@ void TitleScreen(void)
     {
         /* Check to see if user pressed escape */
         if (SDL_PollEvent(&event)
-                && event.type==SDL_KEYDOWN
-                && event.key.keysym.sym == SDLK_ESCAPE)
+                && event.type==SDL_EVENT_KEY_DOWN
+                && event.key.key == SDLK_ESCAPE)
         {
             return;
         }
@@ -256,7 +256,7 @@ void TitleScreen(void)
         /* FIXME not sure trans_wipe() works in Windows: */
         T4K_TransWipe(current_bkg(), RANDOM_WIPE, 5, 20);
 
-        DEBUGCODE(debug_all)
+        DEBUGCODE
         {
             /* Make sure background gets drawn (since trans_wipe() doesn't */
             /* seem to work reliably as of yet):                          */
@@ -280,7 +280,11 @@ void TitleScreen(void)
         {
             /* Draw the entire background, over a black screen if necessary */
             if(current_bkg()->w != screen->w || current_bkg()->h != screen->h)
-                SDL_FillRect(screen, &screen->clip_rect, 0);
+            {
+                SDL_Rect clip_r;
+                SDL_GetSurfaceClipRect(screen, &clip_r);
+                SDL_FillRect(screen, &clip_r, 0);
+            }
 
             SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect);
 
@@ -294,10 +298,7 @@ void TitleScreen(void)
             SDL_BlitSurface(Tux->frame[0], NULL, screen, &tux_anim);
             SDL_BlitSurface(title, NULL, screen, &title_anim);
 
-            SDL_UpdateRect(screen, tux_anim.x, tux_anim.y, tux_anim.w,
-                    min(tux_anim.h + tux_pix_skip, screen->h - tux_anim.y));
-            SDL_UpdateRect(screen, title_anim.x, title_anim.y,
-                    min(title_anim.w + title_pix_skip, screen->w - title_anim.x), title_anim.h);
+            T4K_PresentScreen();
 
             T4K_Throttle(1000/ANIM_FPS, &timer);
         }
@@ -364,7 +365,7 @@ int RenderTitleScreen(void)
             }
         }
 
-        bkg_rect = current_bkg()->clip_rect;
+        SDL_GetSurfaceClipRect(current_bkg(), &bkg_rect);
         bkg_rect.x = (screen->w - bkg_rect.w) / 2;
         bkg_rect.y = (screen->h - bkg_rect.h) / 2;
 
@@ -373,8 +374,10 @@ int RenderTitleScreen(void)
         Tux = T4K_LoadSpriteOfBoundingBox(tux_path, IMG_ALPHA, tux_rect.w, tux_rect.h);
         if(Tux && Tux->frame[0])
         {
-            tux_rect.w = Tux->frame[0]->clip_rect.w;
-            tux_rect.h = Tux->frame[0]->clip_rect.h;
+            SDL_Rect frame_clip;
+            SDL_GetSurfaceClipRect(Tux->frame[0], &frame_clip);
+            tux_rect.w = frame_clip.w;
+            tux_rect.h = frame_clip.h;
         }
         else
         {
@@ -387,8 +390,10 @@ int RenderTitleScreen(void)
         title = T4K_LoadImageOfBoundingBox(title_path, IMG_ALPHA, title_rect.w, title_rect.h);
         if(title)
         {
-            title_rect.w = title->clip_rect.w;
-            title_rect.h = title->clip_rect.h;
+            SDL_Rect title_clip;
+            SDL_GetSurfaceClipRect(title, &title_clip);
+            title_rect.w = title_clip.w;
+            title_rect.h = title_clip.h;
         }
         else
         {
@@ -420,10 +425,10 @@ int RenderTitleScreen(void)
 /* handle titlescreen events (easter egg)
    this function should be called from event loops
    return 1 if events require full redraw */
-int HandleTitleScreenEvents(const SDL_Event* evt)
+int HandleTitleScreenEvents(SDL_Event* evt)
 {
-    if (evt->type == SDL_KEYDOWN)
-        if (evt->key.keysym.sym == SDLK_F10)
+    if (evt->type == SDL_EVENT_KEY_DOWN)
+        if (evt->key.key == SDLK_F10)
             HandleTitleScreenResSwitch(T4K_GetScreen()->w, T4K_GetScreen()->h);
 
     return handle_easter_egg(evt);
@@ -432,9 +437,9 @@ int HandleTitleScreenEvents(const SDL_Event* evt)
 /* handle a resolution switch. Tux et. al. may need to be resized
    and/or repositioned
    */
-int HandleTitleScreenResSwitch(int new_w, int new_h)
+void HandleTitleScreenResSwitch(int new_w, int new_h)
 {
-    return RenderTitleScreen();
+    RenderTitleScreen();
 }
 
 /* handle all titlescreen blitting
@@ -655,7 +660,7 @@ void ShowMessageWrap( int font_size, const char* str )
             }
         }
 
-        SDL_UpdateRect( screen, 0, 0, 0, 0 );
+        T4K_PresentScreen();
 
         while(!finished)
         {
@@ -663,11 +668,11 @@ void ShowMessageWrap( int font_size, const char* str )
             {
                 switch(event.type)
                 {
-                    case SDL_QUIT:
+                    case SDL_EVENT_QUIT:
                         {
                             //cleanup();
                         }
-                    case SDL_MOUSEBUTTONDOWN:
+                    case SDL_EVENT_MOUSE_BUTTON_DOWN:
                         {
                             /* close button pressed */
                             if(T4K_inRect(stop_rect, event.button.x, event.button.y ))
@@ -701,9 +706,9 @@ void ShowMessageWrap( int font_size, const char* str )
                                 inprogress = 0;  
                             }
                         }
-                    case SDL_KEYDOWN:
+                    case SDL_EVENT_KEY_DOWN:
                         {
-                            switch( event.key.keysym.sym )
+                            switch( event.key.key )
                             { 
                                 case SDLK_LEFT:
                                     {
@@ -806,7 +811,7 @@ void ShowMessage(int font_size, const char* str1, const char* str2,
     }
 
     /* and update: */
-    SDL_UpdateRect(screen, 0, 0, 0, 0);
+    T4K_PresentScreen();
 
     while (!finished)
     {
@@ -814,12 +819,12 @@ void ShowMessage(int font_size, const char* str1, const char* str2,
         {
             switch (event.type)
             {
-                case SDL_QUIT:
+                case SDL_EVENT_QUIT:
                     {
                         //cleanup();
                     }
 
-                case SDL_MOUSEBUTTONDOWN:
+                case SDL_EVENT_MOUSE_BUTTON_DOWN:
                     /* "Stop" button - go to main menu: */
                     {
                         if (T4K_inRect(stop_rect, event.button.x, event.button.y ))
@@ -829,7 +834,7 @@ void ShowMessage(int font_size, const char* str1, const char* str2,
                             break;
                         }
                     }
-                case SDL_KEYDOWN:
+                case SDL_EVENT_KEY_DOWN:
                     {
                         finished = 1;
                         playsound(SND_TOCK);
@@ -923,7 +928,7 @@ void trans_wipe(SDL_Surface* newbkg, int type, int var1, int var2)
                                        src.w= screen->w;
                                        src.h= screen->h;
                                        SDL_BlitSurface(newbkg,NULL, screen,&src);
-                                       SDL_Flip(screen);
+                                       T4K_PresentScreen();
 
                                        break;
                                    }
@@ -963,7 +968,7 @@ void trans_wipe(SDL_Surface* newbkg, int type, int var1, int var2)
                                        src.w =screen->w;
                                        src.h =screen->h;
                                        SDL_BlitSurface(newbkg, NULL,screen, &src);
-                                       SDL_Flip(screen);
+                                       T4K_PresentScreen();
 
                                        break;
                                    }
@@ -1019,7 +1024,7 @@ void trans_wipe(SDL_Surface* newbkg, int type, int var1, int var2)
                                      src.w =screen->w;
                                      src.h =screen->h;
                                      SDL_BlitSurface(newbkg, NULL,screen, &src);
-                                     SDL_Flip(screen);
+                                     T4K_PresentScreen();
 
                                      break;
                                  }
@@ -1063,7 +1068,7 @@ void update_screen(int *frame) {
     //        if (SNOW_on)
     //                SDL_UpdateRects(screen, SNOW_add( (SDL_Rect*)&dstupdate, numupdates ), SNOW_rects);
     //        else
-    SDL_UpdateRects(screen, numupdates, dstupdate);
+    T4K_PresentScreen();
 
     numupdates = 0;
     *frame = *frame + 1;
@@ -1122,7 +1127,7 @@ int handle_easter_egg(const SDL_Event* evt)
             //SDL_FillRect(screen, &cursor, 0);
             SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect); //cover egg up once more
             SDL_WarpMouse(cursor.x, cursor.y);
-            SDL_UpdateRect(screen, cursor.x, cursor.y, cursor.w, cursor.h); //egg->x, egg->y, egg->w, egg->h);
+            T4K_PresentScreen();
             egg_active = 0;
         }
         return 1;
@@ -1130,7 +1135,7 @@ int handle_easter_egg(const SDL_Event* evt)
     else //if not, see if the user clicked Tux's beak
     {
         eggtimer = 0;
-        if (evt->type == SDL_MOUSEBUTTONDOWN &&
+        if (evt->type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
                 T4K_inRect(beak, evt->button.x, evt->button.y) )
         {
             SDL_ShowCursor(SDL_DISABLE);
@@ -1140,7 +1145,7 @@ int handle_easter_egg(const SDL_Event* evt)
             {
                 SDL_BlitSurface(current_bkg(), &tux_rect, screen, &tux_rect);
                 SDL_BlitSurface(Tux->frame[--tuxframe], NULL, screen, &tux_rect);
-                SDL_UpdateRect(screen, tux_rect.x, tux_rect.y, tux_rect.w, tux_rect.h);
+                T4K_PresentScreen();
                 SDL_Delay(GOBBLE_ANIM_MS / Tux->num_frames);
             }
 
@@ -1312,7 +1317,7 @@ int load_sound_data(void)
                         "%s\n"
                         "The Simple DirectMedia error that occured was:\n"
                         "%s\n\n", sound_filenames[i], SDL_GetError());
-                return 0;
+                /* Continue without sound rather than crashing engine */
             }
         }
     }

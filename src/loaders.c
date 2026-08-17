@@ -35,6 +35,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 static SDL_Surface* win_bkgd = NULL;
 static SDL_Surface* fullscr_bkgd = NULL;
 
+int braille_language_loader(const char* file_name);
+
 /* Local function prototypes: */
 static int max(int n1, int n2);
 //static SDL_Surface* flip(SDL_Surface *in, int x, int y);
@@ -364,7 +366,7 @@ SDL_Surface* LoadImage(const char* datafile, int mode)
       SDL_LockSurface(tmp_pic);
       SDL_SetColorKey(tmp_pic,
                       (SDL_SRCCOLORKEY | SDL_RLEACCEL),
-                      SDL_MapRGB(tmp_pic->format, 255, 255, 0));
+                      SDL_MapSurfaceRGB(tmp_pic, 255, 255, 0));
       final_pic = SDL_DisplayFormat(tmp_pic);
       SDL_FreeSurface(tmp_pic);
       break;

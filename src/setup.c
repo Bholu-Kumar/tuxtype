@@ -33,7 +33,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 SDL_Window* window = NULL;
 SDL_Renderer* renderer = NULL;
-SDL_Surface* screen = NULL;
 
 int fs_res_x = 0;
 int fs_res_y = 0;
@@ -48,7 +47,7 @@ static int load_settings_filename(const char* fn);
 ****************************/
 void GraphicsInit(void)
 {
-  SDL_DisplayMode mode;
+  const SDL_DisplayMode *mode = NULL;
   Uint32 window_flags = 0;
   int w = RES_X;
   int h = RES_Y;
@@ -58,10 +57,11 @@ void GraphicsInit(void)
 
   // Determine the current resolution: this will be used as the
   // fullscreen resolution, if the user wants fullscreen.
-  if (SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay(), &mode))
+  mode = SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay());
+  if (mode)
   {
-    fs_res_x = mode.w;
-    fs_res_y = mode.h;
+    fs_res_x = mode->w;
+    fs_res_y = mode->h;
   }
   else
   {
@@ -115,6 +115,8 @@ void GraphicsInit(void)
     exit(2);
   }
 
+  T4K_SetWindowAndRenderer(window, renderer);
+
   screen = SDL_CreateSurface(w, h, SDL_PIXELFORMAT_ARGB8888);
   if (!screen)
   {
@@ -166,7 +168,10 @@ void LibInit(Uint32 lib_flags)
       settings.sys_sound = 0;
     }
     else
+    {
       LOG("SDL_InitSubSystem(SDL_INIT_AUDIO) succeeded\n");
+      MIX_Init();
+    }
   }
 
 // atexit(SDL_Quit); // fire and forget... 
@@ -179,50 +184,10 @@ void LibInit(Uint32 lib_flags)
   /* FIXME should read settings before we do this: */ 
   if (settings.sys_sound) //can be turned off with "--nosound" runtime flag
   {
-    int initted = 1;
-
-    /* For SDL_mixer 1.2.10 and later, we must call Mix_Init() before any */
-    /* other SDL_mixer functions. We can see what types of audio files    */
-    /* are supported at this time (ogg and mod are required):             */
-
-#ifdef HAVE_MIX_INIT
-    int flags = MIX_INIT_OGG | MIX_INIT_MP3 | MIX_INIT_MOD | MIX_INIT_FLAC;
-    initted = Mix_Init(flags);
-
-    /* Just give warnings if MP3 or FLAC not supported: */
-    if((initted & MIX_INIT_MP3) != MIX_INIT_MP3)
-      LOG("NOTE - MP3 playback not supported\n");
-    if((initted & MIX_INIT_FLAC) != MIX_INIT_FLAC)
-      LOG("NOTE - MP3 playback not supported\n");
-
-    /* We must have Ogg and Mod support to have sound: */
-    if((initted & (MIX_INIT_OGG | MIX_INIT_MOD)) != (MIX_INIT_OGG | MIX_INIT_MOD))
-    {
-      fprintf(stderr, "Mix_Init: Failed to init required ogg and mod support!\n");
-      fprintf(stderr, "Mix_Init: %s\n", Mix_GetError());
-      settings.sys_sound = 0;
-      initted = 0;
-    }
-    else
-      LOG("Mix_Init() succeeded\n");
-#endif
-
-    DOUT(initted);
-
-    /* If Mix_Init() succeeded (or wasn't required), set audio parameters: */
-    if(initted)
-    {
-      LOG("About to call Mix_OpenAudio():\n");
-//    if (Mix_OpenAudio(22050, AUDIO_S16, 1, 2048) == -1)
-      if(Mix_OpenAudio(MIX_DEFAULT_FREQUENCY, MIX_DEFAULT_FORMAT, 1, 2048) ==
-		      -1)
-      {
-        fprintf(stderr, "Warning: Mix_OpenAudio() failed\n - Reasons: %s\n", SDL_GetError());
-        settings.sys_sound = 0;
-      }
-      else
-        LOG("Mix_OpenAudio() successful\n");
-    }
+    /* SDL3_mixer's fire-and-forget API (used via t4kcommon's T4K_Audio*
+       functions) manages its own default mixer internally — no explicit
+       init needed here. */
+    LOG("Audio enabled\n");
   }
 
   LOG( "-about to init SDL text library (SDL_ttf or SDL_Pango\n" );
