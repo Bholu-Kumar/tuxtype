@@ -224,7 +224,7 @@ SDL_Surface* LoadSVGOfDimensions(char* filename, int width, int height)
   Bmask = 0x000000ff;
   Amask = 0xff000000;
 
-  dest = SDL_CreateRGBSurface(SDL_SWSURFACE | SDL_SRCALPHA,
+  dest = SDL_CreateRGBSurface(0,
         width, height, bpp, Rmask, Gmask, Bmask, Amask);
 
   SDL_LockSurface(dest);

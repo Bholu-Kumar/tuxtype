@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "globals.h"
 #include "funcs.h"
 #include "SDL_extras.h"
-#include "SDL_image.h"
+#include <SDL3_image/SDL_image.h>
 #include "convert_utf.h"
 #include "editor.h"
 

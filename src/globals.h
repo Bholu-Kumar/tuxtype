@@ -49,9 +49,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <locale.h>
 
 // SDL includes:
-#include "SDL.h"
-#include "SDL_image.h"
-#include "SDL_mixer.h"
+#include <SDL3/SDL.h>
+#include <SDL3_image/SDL_image.h>
+#include <SDL3_mixer/SDL_mixer.h>
 /* NOTE only SDL_extras.c/.h now knows about SDL_ttf or SDL_Pango. */
 
 // Translation stuff: 

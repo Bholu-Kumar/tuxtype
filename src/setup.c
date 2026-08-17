@@ -44,8 +44,7 @@ static int load_settings_filename(const char* fn);
 ****************************/
 void GraphicsInit(void)
 {
-  const SDL_VideoInfo* video_info = SDL_GetVideoInfo();
-  Uint32 surface_mode = 0;
+  SDL_DisplayMode mode;
 
   DEBUGCODE
   { fprintf(stderr, "Entering GraphicsInit()\n"); };
@@ -55,33 +54,28 @@ void GraphicsInit(void)
   //Set caption:
   SDL_WM_SetCaption("Tux Typing", "TuxType");
 
-  if (video_info->hw_available)
+  // Determine the current resolution: this will be used as the
+  // fullscreen resolution, if the user wants fullscreen.
+  if (SDL_GetDesktopDisplayMode(SDL_GetPrimaryDisplay(), &mode))
   {
-    surface_mode = SDL_HWSURFACE;
-    LOG("HW mode\n");
+    fs_res_x = mode.w;
+    fs_res_y = mode.h;
   }
   else
   {
-    surface_mode = SDL_SWSURFACE;
-    LOG("SW mode\n");
+    fs_res_x = RES_X;
+    fs_res_y = RES_Y;
   }
 
-  // Determine the current resolution: this will be used as the
-  // fullscreen resolution, if the user wants fullscreen.
   DEBUGCODE
   {
     fprintf(stderr, "Current resolution: w %d, h %d.\n", 
-            video_info->current_w, video_info->current_h);
+            fs_res_x, fs_res_y);
   }
-
-  /* For fullscreen, we try to use current resolution from OS: */
-  
-  fs_res_x = video_info->current_w;
-  fs_res_y = video_info->current_h;
 
   if (settings.fullscreen == 1)
   {
-    screen = SDL_SetVideoMode(fs_res_x, fs_res_y, BPP, SDL_FULLSCREEN | surface_mode);
+    screen = SDL_SetVideoMode(fs_res_x, fs_res_y, BPP, SDL_FULLSCREEN);
     if (screen == NULL)
     {
       fprintf(stderr,
@@ -95,7 +89,7 @@ void GraphicsInit(void)
   /* Either fullscreen not requested, or couldn't get fullscreen in SDL: */
   if (settings.fullscreen == 0)
   {
-    screen = SDL_SetVideoMode(RES_X, RES_Y, BPP, surface_mode);
+    screen = SDL_SetVideoMode(RES_X, RES_Y, BPP, 0);
   }
 
   /* Failed to get a usable screen - must bail out! */
@@ -110,15 +104,10 @@ void GraphicsInit(void)
 
   InitBlitQueue();
 
-
-
   DEBUGCODE 
   {
-    video_info = SDL_GetVideoInfo();
-    fprintf(stderr, "-SDL VidMode successfully set to %ix%ix%i\n",
-            video_info->current_w,
-            video_info->current_h,
-            video_info->vfmt->BitsPerPixel);
+    fprintf(stderr, "-SDL VidMode successfully set to %ix%i\n",
+            fs_res_x, fs_res_y);
   }
 
 	LOG( "GraphicsInit():END\n" );

@@ -28,7 +28,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 #include <stdlib.h>
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 /* while it looks like you can just
  * change the number of planes, flakes,

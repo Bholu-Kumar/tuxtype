@@ -62,7 +62,7 @@ void DrawButton(SDL_Rect* target_rect,
 {
   /* NOTE - we use a 32-bit temp surface even if we have a 16-bit */
   /* screen - it gets converted during blitting.                  */
-  SDL_Surface* tmp_surf = SDL_CreateRGBSurface(SDL_SWSURFACE|SDL_SRCALPHA,
+  SDL_Surface* tmp_surf = SDL_CreateRGBSurface(0,
                                           target_rect->w,
                                           target_rect->h,
                                           32,
@@ -211,7 +211,7 @@ SDL_Surface* Flip( SDL_Surface *in, int x, int y ) {
         /* --- create our new surface --- */
 
         out = SDL_CreateRGBSurface(
-                SDL_SWSURFACE,
+                0,
                 in->w, in->h, 32, rmask, gmask, bmask, amask);
 
         /* --- flip horizontally if requested --- */
@@ -327,7 +327,7 @@ SDL_Surface* Blend(SDL_Surface* S1, SDL_Surface* S2, float gamma)
     }
   }
 
-  tmpS = SDL_ConvertSurface(S1, fmt1, SDL_SWSURFACE);
+  tmpS = SDL_ConvertSurface(S1, fmt1, 0);
   if (tmpS == NULL)
   {
     perror("SDL_ConvertSurface() failed");
@@ -443,14 +443,14 @@ void SwitchScreenMode(void)
     screen = SDL_SetVideoMode(fs_res_x,
                               fs_res_y,
                               BPP,
-                              SDL_SWSURFACE|SDL_HWPALETTE|SDL_FULLSCREEN);
+                              SDL_FULLSCREEN);
   }
   else
   {
     screen = SDL_SetVideoMode(RES_X,
                               RES_Y,
                               BPP,
-                              SDL_SWSURFACE|SDL_HWPALETTE);
+                              0);
 
   }
 
@@ -512,7 +512,7 @@ SDL_Surface* zoom(SDL_Surface* src, int new_w, int new_h)
 
   /* Create surface for zoom: */
 
-  s = SDL_CreateRGBSurface(src->flags,        /* SDL_SWSURFACE, */
+  s = SDL_CreateRGBSurface(0,        /* SDL_SWSURFACE, */
                            new_w, new_h, src->format->BitsPerPixel,
                            src->format->Rmask,
                            src->format->Gmask,
@@ -1174,7 +1174,7 @@ static int Set_SDL_Pango_Font_Size(int size);
 
 /*-- file-scope variables and local file prototypes for SDL_ttf-based code: */
 #else
-#include "SDL_ttf.h"
+#include <SDL3_ttf/SDL_ttf.h>
 /* We cache fonts here once loaded to improve performance: */
 TTF_Font* font_list[MAX_FONT_SIZE + 1] = {NULL};
 static void free_font_list(void);
@@ -1297,7 +1297,7 @@ DEBUGCODE
     return NULL;
   }
 
-  bg = SDL_CreateRGBSurface(SDL_SWSURFACE,
+  bg = SDL_CreateRGBSurface(0,
                             (black_letters->w) + 5,
                             (black_letters->h) + 5,
                              32,

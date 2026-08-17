@@ -34,7 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // Need this so the #ifdef HAVE_LIBSDL_PANGO will work:
 #include "../config.h"
 
-#include "SDL.h"
+#include <SDL3/SDL.h>
 
 
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
