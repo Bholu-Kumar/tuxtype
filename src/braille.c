@@ -101,15 +101,37 @@ int braille_language_loader(char *language)
         return 0;
     }
 
-    while (!feof(fp) && iter < BRAILLE_MAP_MAX)
     {
-        if (fscanf(fp, "%99ls %99ls %99ls %99ls\n",
-                   braille_key_value_map[iter].key,
-                   braille_key_value_map[iter].value_begin,
-                   braille_key_value_map[iter].value_middle,
-                   braille_key_value_map[iter].value_end) == 4)
+        /* Parse one line at a time so that short lines (2-column format such as
+         * spanish.txt) never bleed into the next line.  fscanf's whitespace
+         * matching treats '\n' the same as ' ', which causes it to silently
+         * consume tokens from subsequent lines when fewer than 4 fields are
+         * present on the current line.  fgetws + swscanf avoid this entirely. */
+        wchar_t line[512];
+        while (iter < BRAILLE_MAP_MAX && fgetws(line, 512, fp) != NULL)
         {
-            iter++;
+            wchar_t k[100]={0}, b[100]={0}, m[100]={0}, e[100]={0};
+            int fields = swscanf(line, L"%99ls %99ls %99ls %99ls", k, b, m, e);
+
+            if (fields == 4)
+            {
+                /* Standard 4-column format: key begin middle end */
+                wcscpy(braille_key_value_map[iter].key,          k);
+                wcscpy(braille_key_value_map[iter].value_begin,  b);
+                wcscpy(braille_key_value_map[iter].value_middle, m);
+                wcscpy(braille_key_value_map[iter].value_end,    e);
+                iter++;
+            }
+            else if (fields == 2)
+            {
+                /* 2-column format: key value — replicate value for all positions */
+                wcscpy(braille_key_value_map[iter].key,          k);
+                wcscpy(braille_key_value_map[iter].value_begin,  b);
+                wcscpy(braille_key_value_map[iter].value_middle, b);
+                wcscpy(braille_key_value_map[iter].value_end,    b);
+                iter++;
+            }
+            /* fields < 2 or EOF: blank/malformed line — skip silently */
         }
     }
 
