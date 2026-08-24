@@ -525,8 +525,6 @@ int SetupPaths(const char* theme_dir)
 
   /* Now check for VAR_PREFIX (for modifiable data shared by all users, */ 
   /* such as custom word lists, high scores, etc:                       */
-  /* This will generally be /var/lib/tuxtype (distro-provided pkg)      */
-  /* or /usr/local/etc/tuxtype (locally-built and installed pkg)        */
   if (CheckFile(VAR_PREFIX))
   {
     strncpy(settings.var_data_path, VAR_PREFIX, FNLEN - 1);
@@ -534,13 +532,21 @@ int SetupPaths(const char* theme_dir)
   }
   else
   {
-    fprintf(stderr, "Error - VAR_PREFIX = '%s' not found!\n", VAR_PREFIX);
-    return 0;
+  #ifndef WIN32
+    mkdir(VAR_PREFIX, 0777);
+  #endif
+    if (CheckFile(VAR_PREFIX))
+    {
+      strncpy(settings.var_data_path, VAR_PREFIX, FNLEN - 1);
+    }
+    else
+    {
+      fprintf(stderr, "Warning - VAR_PREFIX = '%s' not found, falling back to '%s'\n", VAR_PREFIX, DATA_PREFIX);
+      strncpy(settings.var_data_path, DATA_PREFIX, FNLEN - 1);
+    }
   }
 
   /* Now check for CONF_PREFIX (for program wide settings that apply to all users). */ 
-  /* This would typically be /etc/tuxtype if tuxtype is installed by a distro pkg,  */
-  /* or /usr/local/etc/tuxtype if the package is built locally                      */
   if (CheckFile(CONF_PREFIX))
   {
     strncpy(settings.global_settings_path, CONF_PREFIX, FNLEN - 1);
@@ -548,8 +554,18 @@ int SetupPaths(const char* theme_dir)
   }
   else
   {
-    fprintf(stderr, "Error - CONF_PREFIX = '%s' not found!\n", CONF_PREFIX);
-    return 0;
+  #ifndef WIN32
+    mkdir(CONF_PREFIX, 0755);
+  #endif
+    if (CheckFile(CONF_PREFIX))
+    {
+      strncpy(settings.global_settings_path, CONF_PREFIX, FNLEN - 1);
+    }
+    else
+    {
+      fprintf(stderr, "Warning - CONF_PREFIX = '%s' not found, falling back to '%s'\n", CONF_PREFIX, DATA_PREFIX);
+      strncpy(settings.global_settings_path, DATA_PREFIX, FNLEN - 1);
+    }
   }
 
 
