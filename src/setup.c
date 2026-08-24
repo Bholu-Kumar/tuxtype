@@ -344,6 +344,19 @@ static int load_settings_fp(FILE* fp)
       settings.tts_volume = atoi(value);
       setting_found = 1;
     }
+    else if (strncmp(setting, "tts", FNLEN) == 0)
+    {
+      DEBUGCODE {fprintf(stderr, "LoadSettings: Setting tts to %s\n", value);}
+      settings.tts = atoi(value);
+      text_to_speech_status = settings.tts;
+      setting_found = 1;
+    }
+    else if (strncmp(setting, "braille", FNLEN) == 0)
+    {
+      DEBUGCODE {fprintf(stderr, "LoadSettings: Setting braille to %s\n", value);}
+      settings.braille = atoi(value);
+      setting_found = 1;
+    }
     else
       DEBUGCODE {fprintf(stderr, "load_settings_fp(): unrecognized string: %s\n", value);}
 
@@ -412,6 +425,8 @@ void SaveSettings(void)
 	fprintf( settingsFile, "menu_music=%d\n", settings.menu_music );
 	fprintf( settingsFile, "fullscreen=%d\n", settings.fullscreen);
 	fprintf( settingsFile, "tts_volume=%d\n", settings.tts_volume);
+	fprintf( settingsFile, "tts=%d\n", settings.tts);
+	fprintf( settingsFile, "braille=%d\n", settings.braille);
 
 
 // 	if (screen->flags & SDL_FULLSCREEN){

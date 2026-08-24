@@ -32,6 +32,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #include "convert_utf.h"
 #include "globals.h"
+
+extern void SaveSettings(void);
+
+void ToggleTTS(void) {
+    if (settings.tts) {
+        /* Say "disabled" BEFORE turning it off so we hear the confirmation */
+        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, "Text to speech disabled.");
+        settings.tts = 0;
+        text_to_speech_status = 0;
+    } else {
+        settings.tts = 1;
+        text_to_speech_status = 1;
+        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, "Text to speech enabled.");
+    }
+    SaveSettings();
+}
+
+void ToggleBraille(void) {
+    if (settings.braille == 1) {
+        settings.braille = 0;
+        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Braille output disabled"));
+    } else {
+        settings.braille = 1;
+        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Braille output enabled"));
+    }
+    SaveSettings();
+}
+
 #include "SDL_extras.h"
 #include "pixels.h"
 //Just need funcs.h for CurrentBkgd()

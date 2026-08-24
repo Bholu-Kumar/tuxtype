@@ -90,6 +90,10 @@ extern SDL_Thread *tts_thread;
 //TTS Word announcer Thread
 extern SDL_Thread *tts_announcer_thread;
 
+extern void ToggleTTS(void);
+extern void ToggleBraille(void);
+
+
 #define FNLEN	256
 
 

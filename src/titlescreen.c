@@ -87,6 +87,11 @@ SDL_Surface* title = NULL;
 SDL_Surface* egg = NULL;
 int egg_active = 0; //are we currently using the egg cursor?
 
+static SDL_Surface* hint_surf1 = NULL;
+static SDL_Surface* hint_surf2 = NULL;
+static SDL_Rect hint_rect1;
+static SDL_Rect hint_rect2;
+
 /* locations we need */
 SDL_Rect bkg_rect,
          logo_rect,
@@ -408,6 +413,26 @@ int RenderTitleScreen(void)
         egg = T4K_LoadImage(egg_path, IMG_COLORKEY | IMG_NOT_REQUIRED);
 #endif
 
+        if (!hint_surf1) {
+            hint_surf1 = T4K_BlackOutline(_("F5: Toggle Text-to-Speech"), 16, &white);
+        }
+        if (hint_surf1) {
+            hint_rect1.x = 10;
+            hint_rect1.y = screen->h - 50; 
+            hint_rect1.w = hint_surf1->w;
+            hint_rect1.h = hint_surf1->h;
+        }
+
+        if (!hint_surf2) {
+            hint_surf2 = T4K_BlackOutline(_("F9: Toggle Braille Output"), 16, &white);
+        }
+        if (hint_surf2) {
+            hint_rect2.x = 10;
+            hint_rect2.y = screen->h - 25; 
+            hint_rect2.w = hint_surf2->w;
+            hint_rect2.h = hint_surf2->h;
+        }
+
         beak.x = tux_rect.x + beak_pos[0] * tux_rect.w;
         beak.y = tux_rect.y + beak_pos[1] * tux_rect.h;
         beak.w = beak_pos[2] * tux_rect.w;
@@ -485,6 +510,15 @@ void HandleTitleScreenAnimations_Reset(bool reset)
         T4K_UpdateRect(screen, &cursor);
     }
 
+    if (hint_surf1) {
+        SDL_BlitSurface(hint_surf1, NULL, screen, &hint_rect1);
+        T4K_UpdateRect(screen, &hint_rect1);
+    }
+    if (hint_surf2) {
+        SDL_BlitSurface(hint_surf2, NULL, screen, &hint_rect2);
+        T4K_UpdateRect(screen, &hint_rect2);
+    }
+
     frame_counter++;
 }
 
@@ -512,6 +546,18 @@ void free_titlescreen(void)
     {
         SDL_FreeSurface(egg);
         egg = NULL;
+    }
+
+    if(hint_surf1)
+    {
+        SDL_FreeSurface(hint_surf1);
+        hint_surf1 = NULL;
+    }
+
+    if(hint_surf2)
+    {
+        SDL_FreeSurface(hint_surf2);
+        hint_surf2 = NULL;
     }
 
     if(title)
