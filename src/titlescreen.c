@@ -338,8 +338,14 @@ void DrawTitleScreen(void)
     SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect);
     SDL_BlitSurface(Tux->frame[0], NULL, screen, &tux_rect);
     SDL_BlitSurface(title, NULL, screen, &title_rect);
-    //SDL_UpdateRect(screen, 0, 0, 0, 0);
+
+    /* Blit cached hint surfaces (right side, bottom) */
+    if (hint_surf1)
+        SDL_BlitSurface(hint_surf1, NULL, screen, &hint_rect1);
+    if (hint_surf2)
+        SDL_BlitSurface(hint_surf2, NULL, screen, &hint_rect2);
 }
+
 
 /* Render and position all titlescreen items to match current
    screen size. Rendering is done only if needed.
@@ -413,25 +419,41 @@ int RenderTitleScreen(void)
         egg = T4K_LoadImage(egg_path, IMG_COLORKEY | IMG_NOT_REQUIRED);
 #endif
 
-        if (!hint_surf1) {
-            hint_surf1 = T4K_BlackOutline(_("F5: Toggle Text-to-Speech"), 16, &white);
-        }
-        if (hint_surf1) {
-            hint_rect1.x = 10;
-            hint_rect1.y = screen->h - 50; 
-            hint_rect1.w = hint_surf1->w;
-            hint_rect1.h = hint_surf1->h;
+        /* --- (Re-)render cached keyboard-shortcut hint surfaces --- */
+        {
+            int hint_font_size = (int)(12 * screen->w / 640.0f);
+            if (hint_font_size < 8)  hint_font_size = 8;
+            if (hint_font_size > 18) hint_font_size = 18;
+
+            if (hint_surf1) { SDL_FreeSurface(hint_surf1); hint_surf1 = NULL; }
+            if (hint_surf2) { SDL_FreeSurface(hint_surf2); hint_surf2 = NULL; }
+
+            hint_surf1 = T4K_BlackOutline(_("Press F5 for speech support"), hint_font_size, &yellow);
+            hint_surf2 = T4K_BlackOutline(_("Press F9 for Braille mode"),   hint_font_size, &yellow);
+
+            /* Left-align hints at menu_rect.x (= menu_pos[0] * screen_w = 0.38).
+               T4K places every button at that same x, so hints line up exactly
+               with Options/Quit in both windowed and fullscreen modes. */
+            {
+                int menu_left = (int)(0.38f * screen->w);
+
+                if (hint_surf2)
+                {
+                    hint_rect2.w = hint_surf2->w;
+                    hint_rect2.h = hint_surf2->h;
+                    hint_rect2.x = menu_left;
+                    hint_rect2.y = screen->h - hint_surf2->h - 4;
+                }
+                if (hint_surf1)
+                {
+                    hint_rect1.w = hint_surf1->w;
+                    hint_rect1.h = hint_surf1->h;
+                    hint_rect1.x = menu_left;
+                    hint_rect1.y = hint_rect2.y - hint_surf1->h - 4;
+                }
+            }
         }
 
-        if (!hint_surf2) {
-            hint_surf2 = T4K_BlackOutline(_("F9: Toggle Braille Output"), 16, &white);
-        }
-        if (hint_surf2) {
-            hint_rect2.x = 10;
-            hint_rect2.y = screen->h - 25; 
-            hint_rect2.w = hint_surf2->w;
-            hint_rect2.h = hint_surf2->h;
-        }
 
         beak.x = tux_rect.x + beak_pos[0] * tux_rect.w;
         beak.y = tux_rect.y + beak_pos[1] * tux_rect.h;
