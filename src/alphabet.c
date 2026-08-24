@@ -145,10 +145,14 @@ int LoadKeyboard(void)
 
     do
     {
-      int fscanf_result = fscanf( f, "%[^\n]\n", str);
+      str[0] = '\0';
+      int fscanf_result = fscanf( f, "%254[^\n]\n", str);
       
       if (fscanf_result == EOF)
         break;
+      if (fscanf_result != 1 || str[0] == '\0')
+        continue;
+
       /* Convert to wcs from UTF-8, if needed; */
       ConvertFromUTF8(wide_str, str, 255);
 

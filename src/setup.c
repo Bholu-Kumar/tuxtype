@@ -613,8 +613,12 @@ DEBUGCODE
     fprintf(stderr, "global_settings_path: '%s'\n\n", settings.global_settings_path);
   }
 
+  T4K_SetFontName(settings.theme_font_name);
+  LoadLang();
+
   return 1;	
 }
+
 
 
 /* Set the application's icon: */

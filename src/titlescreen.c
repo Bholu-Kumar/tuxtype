@@ -182,18 +182,18 @@ void TitleScreen(void)
     start_time = SDL_GetTicks();
 
     /* display the Standby screen */
-    SDL_FillRect(screen, NULL, SDL_MapSurfaceRGB(screen, 0, 0, 0));
+    SDL_FillRect(T4K_GetScreen(), NULL, SDL_MapSurfaceRGB(T4K_GetScreen(), 0, 0, 0));
 
     logo = T4K_LoadImage(standby_path, IMG_REGULAR);
     if(logo)
     {
         /* Center horizontally and vertically */
-        logo_rect.x = (screen->w - logo->w) / 2;
-        logo_rect.y = (screen->h - logo->h) / 2;
+        logo_rect.x = (T4K_GetScreen()->w - logo->w) / 2;
+        logo_rect.y = (T4K_GetScreen()->h - logo->h) / 2;
         logo_rect.w = logo->w;
         logo_rect.h = logo->h;
 
-        SDL_BlitSurface(logo, NULL, screen, &logo_rect);
+        SDL_BlitSurface(logo, NULL, T4K_GetScreen(), &logo_rect);
         SDL_FreeSurface(logo);
     }
 
@@ -265,7 +265,7 @@ void TitleScreen(void)
         {
             /* Make sure background gets drawn (since trans_wipe() doesn't */
             /* seem to work reliably as of yet):                          */
-            SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect);
+            SDL_BlitSurface(current_bkg(), NULL, T4K_GetScreen(), &bkg_rect);
         }
     }
 
@@ -276,22 +276,22 @@ void TitleScreen(void)
         /* final tux & title positioins are already calculated,
            start outside the screen */
         tux_anim = tux_rect;
-        tux_anim.y = screen->h;
+        tux_anim.y = T4K_GetScreen()->h;
 
         title_anim = title_rect;
-        title_anim.x = screen->w;
+        title_anim.x = T4K_GetScreen()->w;
 
         for(i = 0; i < ANIM_FRAMES; i++)
         {
             /* Draw the entire background, over a black screen if necessary */
-            if(current_bkg()->w != screen->w || current_bkg()->h != screen->h)
+            if(current_bkg()->w != T4K_GetScreen()->w || current_bkg()->h != T4K_GetScreen()->h)
             {
                 SDL_Rect clip_r;
-                SDL_GetSurfaceClipRect(screen, &clip_r);
-                SDL_FillRect(screen, &clip_r, 0);
+                SDL_GetSurfaceClipRect(T4K_GetScreen(), &clip_r);
+                SDL_FillRect(T4K_GetScreen(), &clip_r, 0);
             }
 
-            SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect);
+            SDL_BlitSurface(current_bkg(), NULL, T4K_GetScreen(), &bkg_rect);
 
             /* calculate shifts */
             tux_pix_skip = (tux_anim.y - tux_rect.y) / (ANIM_FRAMES - i);
@@ -300,8 +300,8 @@ void TitleScreen(void)
             title_anim.x -= title_pix_skip;
 
             /* update screen */
-            SDL_BlitSurface(Tux->frame[0], NULL, screen, &tux_anim);
-            SDL_BlitSurface(title, NULL, screen, &title_anim);
+            SDL_BlitSurface(Tux->frame[0], NULL, T4K_GetScreen(), &tux_anim);
+            SDL_BlitSurface(title, NULL, T4K_GetScreen(), &title_anim);
 
             T4K_PresentScreen();
 
@@ -335,15 +335,18 @@ void TitleScreen(void)
 
 void DrawTitleScreen(void)
 {
-    SDL_BlitSurface(current_bkg(), NULL, screen, &bkg_rect);
-    SDL_BlitSurface(Tux->frame[0], NULL, screen, &tux_rect);
-    SDL_BlitSurface(title, NULL, screen, &title_rect);
+    if (current_bkg())
+        SDL_BlitSurface(current_bkg(), NULL, T4K_GetScreen(), &bkg_rect);
+    if (Tux && Tux->frame[0])
+        SDL_BlitSurface(Tux->frame[0], NULL, T4K_GetScreen(), &tux_rect);
+    if (title)
+        SDL_BlitSurface(title, NULL, T4K_GetScreen(), &title_rect);
 
     /* Blit cached hint surfaces (right side, bottom) */
     if (hint_surf1)
-        SDL_BlitSurface(hint_surf1, NULL, screen, &hint_rect1);
+        SDL_BlitSurface(hint_surf1, NULL, T4K_GetScreen(), &hint_rect1);
     if (hint_surf2)
-        SDL_BlitSurface(hint_surf2, NULL, screen, &hint_rect2);
+        SDL_BlitSurface(hint_surf2, NULL, T4K_GetScreen(), &hint_rect2);
 }
 
 
@@ -377,8 +380,8 @@ int RenderTitleScreen(void)
         }
 
         SDL_GetSurfaceClipRect(current_bkg(), &bkg_rect);
-        bkg_rect.x = (screen->w - bkg_rect.w) / 2;
-        bkg_rect.y = (screen->h - bkg_rect.h) / 2;
+        bkg_rect.x = (T4K_GetScreen()->w - bkg_rect.w) / 2;
+        bkg_rect.y = (T4K_GetScreen()->h - bkg_rect.h) / 2;
 
         /* Tux in lower left corner of the screen */
         T4K_SetRect(&tux_rect, tux_pos);
@@ -421,7 +424,7 @@ int RenderTitleScreen(void)
 
         /* --- (Re-)render cached keyboard-shortcut hint surfaces --- */
         {
-            int hint_font_size = (int)(12 * screen->w / 640.0f);
+            int hint_font_size = (int)(12 * T4K_GetScreen()->w / 640.0f);
             if (hint_font_size < 8)  hint_font_size = 8;
             if (hint_font_size > 18) hint_font_size = 18;
 
@@ -435,14 +438,14 @@ int RenderTitleScreen(void)
                T4K places every button at that same x, so hints line up exactly
                with Options/Quit in both windowed and fullscreen modes. */
             {
-                int menu_left = (int)(0.38f * screen->w);
+                int menu_left = (int)(0.38f * T4K_GetScreen()->w);
 
                 if (hint_surf2)
                 {
                     hint_rect2.w = hint_surf2->w;
                     hint_rect2.h = hint_surf2->h;
                     hint_rect2.x = menu_left;
-                    hint_rect2.y = screen->h - hint_surf2->h - 4;
+                    hint_rect2.y = T4K_GetScreen()->h - hint_surf2->h - 4;
                 }
                 if (hint_surf1)
                 {
@@ -460,8 +463,8 @@ int RenderTitleScreen(void)
         beak.w = beak_pos[2] * tux_rect.w;
         beak.h = beak_pos[3] * tux_rect.h;
 
-        curr_res_x = screen->w;
-        curr_res_y = screen->h;
+        curr_res_x = T4K_GetScreen()->w;
+        curr_res_y = T4K_GetScreen()->h;
 
         DEBUGMSG(debug_titlescreen, "Leaving RenderTitleScreen().\n");
     }
@@ -519,26 +522,27 @@ void HandleTitleScreenAnimations_Reset(bool reset)
     if (Tux && tux_frame)
     {
         /* Redraw background to keep edges anti-aliased properly: */
-        SDL_BlitSurface(current_bkg(),&tux_rect, screen, &tux_rect);
-        SDL_BlitSurface(Tux->frame[tux_frame - 1], NULL, screen, &tux_rect);
-        T4K_UpdateRect(screen, &tux_rect);
+        if (current_bkg())
+            SDL_BlitSurface(current_bkg(),&tux_rect, T4K_GetScreen(), &tux_rect);
+        SDL_BlitSurface(Tux->frame[tux_frame - 1], NULL, T4K_GetScreen(), &tux_rect);
+        T4K_UpdateRect(T4K_GetScreen(), &tux_rect);
     }
 
-    if (egg_active) { //if we need to, draw the egg cursor
+    if (egg_active && egg) { //if we need to, draw the egg cursor
         //who knows why GetMouseState() doesn't take Sint16's...
         SDL_GetMouseState((int*)(&cursor.x), (int*)(&cursor.y));
         cursor.x -= egg->w / 2; //center vertically
-        SDL_BlitSurface(egg, NULL, screen, &cursor);
-        T4K_UpdateRect(screen, &cursor);
+        SDL_BlitSurface(egg, NULL, T4K_GetScreen(), &cursor);
+        T4K_UpdateRect(T4K_GetScreen(), &cursor);
     }
 
     if (hint_surf1) {
-        SDL_BlitSurface(hint_surf1, NULL, screen, &hint_rect1);
-        T4K_UpdateRect(screen, &hint_rect1);
+        SDL_BlitSurface(hint_surf1, NULL, T4K_GetScreen(), &hint_rect1);
+        T4K_UpdateRect(T4K_GetScreen(), &hint_rect1);
     }
     if (hint_surf2) {
-        SDL_BlitSurface(hint_surf2, NULL, screen, &hint_rect2);
-        T4K_UpdateRect(screen, &hint_rect2);
+        SDL_BlitSurface(hint_surf2, NULL, T4K_GetScreen(), &hint_rect2);
+        T4K_UpdateRect(T4K_GetScreen(), &hint_rect2);
     }
 
     frame_counter++;

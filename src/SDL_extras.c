@@ -38,13 +38,28 @@ extern void SaveSettings(void);
 void ToggleTTS(void) {
     if (settings.tts) {
         /* Say "disabled" BEFORE turning it off so we hear the confirmation */
-        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, "Text to speech disabled.");
+        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Text to speech disabled."));
         settings.tts = 0;
         text_to_speech_status = 0;
     } else {
-        settings.tts = 1;
-        text_to_speech_status = 1;
-        T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, "Text to speech enabled.");
+        char tts_lang[10] = {0};
+        if (settings.use_english || settings.theme_locale_name[0] == '\0' ||
+            strncmp(settings.theme_locale_name, "C", 1) == 0 ||
+            strncmp(settings.theme_locale_name, "POSIX", 5) == 0) {
+            snprintf(tts_lang, sizeof(tts_lang), "en");
+        } else {
+            snprintf(tts_lang, sizeof(tts_lang), "%.*s", 2, settings.theme_locale_name);
+        }
+
+        if (!T4K_Tts_set_voice(tts_lang)) {
+            T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Tts is not available for this language. Tts disabled!"));
+            settings.tts = 0;
+            text_to_speech_status = 0;
+        } else {
+            settings.tts = 1;
+            text_to_speech_status = 1;
+            T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Text to speech enabled."));
+        }
     }
     SaveSettings();
 }

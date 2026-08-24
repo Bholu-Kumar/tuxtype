@@ -80,7 +80,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 // FIXME if we really need these, make them into functions rather than
 // "evil" macros
 #define to_upper(c) (((c) >= 'a' && (c) <= 'z') ? (c) -32 : (c))
-#define COL2RGB( col ) SDL_MapRGB( screen->format, col->r, col->g, col->b )
+#define COL2RGB( col ) SDL_MapSurfaceRGB( T4K_GetScreen(), (col)->r, (col)->g, (col)->b )
 #define MIN(x,y) ((x) < (y) ? (x) : (y))
 #define MAX(x,y) ((x) > (y) ? (x) : (y))
 

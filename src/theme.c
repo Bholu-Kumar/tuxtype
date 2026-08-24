@@ -202,6 +202,7 @@ void ChooseTheme(void)
                 /* --- english --- */
                 SetupPaths(NULL);
               }
+              T4K_PrerenderAll();
 
               stop = 1;
               break;
@@ -229,10 +230,12 @@ void ChooseTheme(void)
               /* --- English --- */
               SetupPaths(NULL);
             }
+            T4K_PrerenderAll();
 
             stop = 1;
             break;
           }
+
 
           if ((event.key.key == SDLK_LEFT)
            || (event.key.key == SDLK_PAGEUP))

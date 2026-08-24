@@ -54,12 +54,13 @@ static int is_xml_file(const struct dirent* xml_dirent);
 void InstructCascade(void)
 {
   char fn[FNLEN]; 
+  fn[0] = '\0';
 
   /* Try theme script first: */
   if (!settings.use_english)
     sprintf( fn, "%s/scripts/cascade.xml", settings.theme_data_path);
 
-  if (load_script( fn ) == 0) /* meaning successful load */
+  if (fn[0] != '\0' && load_script( fn ) == 0) /* meaning successful load */
   {
     run_script();
     return;
@@ -77,12 +78,13 @@ void InstructCascade(void)
 void InstructLaser(void)
 {
   char fn[FNLEN]; 
+  fn[0] = '\0';
 
   /* Try theme script first: */
   if (!settings.use_english)
     sprintf( fn, "%s/scripts/laser.xml", settings.theme_data_path);
 
-  if (load_script( fn ) == 0) /* meaning successful load */
+  if (fn[0] != '\0' && load_script( fn ) == 0) /* meaning successful load */
   {
     run_script();
     return;
@@ -100,12 +102,13 @@ void InstructLaser(void)
 void ProjectInfo(void)
 {
   char fn[FNLEN]; 
+  fn[0] = '\0';
 
   /* Try theme script first: */
   if (!settings.use_english)
     sprintf( fn, "%s/scripts/projectInfo.xml", settings.theme_data_path);
 
-  if (load_script( fn ) == 0) /* meaning successful load */
+  if (fn[0] != '\0' && load_script( fn ) == 0) /* meaning successful load */
   {
     run_script();
     return;
@@ -318,13 +321,13 @@ int XMLLesson(void)
 
   leftRect.w = left->w;
   leftRect.h = left->h;
-  leftRect.x = screen->w/2 - 80 - (leftRect.w/2);
-  leftRect.y = screen->h - 50;
+  leftRect.x = T4K_GetScreen()->w/2 - 80 - (leftRect.w/2);
+  leftRect.y = T4K_GetScreen()->h - 50;
 
   rightRect.w = right->w; 
   rightRect.h = right->h;
-  rightRect.x = screen->w/2 + 80 - (rightRect.w/2);
-  rightRect.y = screen->h - 50;
+  rightRect.x = T4K_GetScreen()->w/2 + 80 - (rightRect.w/2);
+  rightRect.y = T4K_GetScreen()->h - 50;
 
   /* set initial rect sizes */
   titleRects[0].y = 30;
@@ -468,30 +471,31 @@ int XMLLesson(void)
     {
       int start;
 
-      SDL_BlitSurface(CurrentBkgd(), NULL, screen, NULL );
+      SDL_BlitSurface(CurrentBkgd(), NULL, T4K_GetScreen(), NULL );
 
       start = loc - (loc % 8);
 
       for (i = start; i <  MIN(start + 8, num_scripts); i++) 
       {
-        titleRects[i % 8].x = screen->w/2 - (titles[i]->w/2);
-        if (i == loc)
+        if (titles[i])
+          titleRects[i % 8].x = T4K_GetScreen()->w/2 - (titles[i]->w/2);
+        if (i == loc && select[loc])
         {   /* Draw selected text in yellow:  */
-          SDL_BlitSurface(select[loc], NULL, screen, &titleRects[i%8]);
+          SDL_BlitSurface(select[loc], NULL, T4K_GetScreen(), &titleRects[i%8]);
 		  T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,"%s",script_filenames[loc]);
         }
-        else
+        else if (titles[i])
         {            /* Draw unselected text in white: */
-          SDL_BlitSurface(titles[i], NULL, screen, &titleRects[i%8]);
+          SDL_BlitSurface(titles[i], NULL, T4K_GetScreen(), &titleRects[i%8]);
 	    }
       }
 
       /* --- draw arrow buttons --- */
-      if (start > 0)
-        SDL_BlitSurface(left, NULL, screen, &leftRect);
+      if (start > 0 && left)
+        SDL_BlitSurface(left, NULL, T4K_GetScreen(), &leftRect);
 
-      if (start + 8 < num_scripts)
-        SDL_BlitSurface(right, NULL, screen, &rightRect);
+      if (start + 8 < num_scripts && right)
+        SDL_BlitSurface(right, NULL, T4K_GetScreen(), &rightRect);
 
       T4K_PresentScreen();
     }
@@ -1188,48 +1192,52 @@ static void run_script(void)
 
     /* --- setup background color --- */
     if (curPage->bgcolor)
-      SDL_FillRect( screen, NULL, COL2RGB(curPage->bgcolor));
+      SDL_FillRect( T4K_GetScreen(), NULL, COL2RGB(curPage->bgcolor));
     else if (curScript->bgcolor)
-      SDL_FillRect(screen, NULL, COL2RGB(curScript->bgcolor));
+      SDL_FillRect(T4K_GetScreen(), NULL, COL2RGB(curScript->bgcolor));
 
     /* --- setup background image --- */
     if (curPage->background)
     {
       SDL_Surface* img = LoadImage(curPage->background, IMG_ALPHA|IMG_NOT_REQUIRED);
-
-      /* hack: since this is the background it needs to scale when in fullscreen
-       * but shouldn't every image scale when in fullscreen? assuming svg is for that... -MDT */
-      if (settings.fullscreen)
+      if (img)
       {
-        SDL_Surface* fsimg = zoom(img, fs_res_x, fs_res_y);
-        SDL_BlitSurface(fsimg, NULL, screen, NULL);
-        SDL_FreeSurface(fsimg);
+        if (window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
+        {
+          SDL_Surface* fsimg = zoom(img, fs_res_x, fs_res_y);
+          if (fsimg)
+          {
+            SDL_BlitSurface(fsimg, NULL, T4K_GetScreen(), NULL);
+            SDL_FreeSurface(fsimg);
+          }
+        }
+        else
+        { 
+          SDL_BlitSurface(img, NULL, T4K_GetScreen(), NULL);
+        } 
+        SDL_FreeSurface(img);
       }
-      else
-      { 
-        SDL_BlitSurface(img, NULL, screen, NULL);
-      } 
-
-      SDL_FreeSurface(img);
-
     }
     else if (curScript->background)
     {
       SDL_Surface* img = LoadImage(curScript->background, IMG_ALPHA|IMG_NOT_REQUIRED);
-
-      /* hack: since this is the background it needs to scale when in fullscreen -MDT */
-      if (settings.fullscreen)
-      { 
-        SDL_Surface* fsimg = zoom(img, fs_res_x, fs_res_y);
-        SDL_BlitSurface(fsimg, NULL, screen, NULL);
-        SDL_FreeSurface(fsimg);
+      if (img)
+      {
+        if (window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
+        { 
+          SDL_Surface* fsimg = zoom(img, fs_res_x, fs_res_y);
+          if (fsimg)
+          {
+            SDL_BlitSurface(fsimg, NULL, T4K_GetScreen(), NULL);
+            SDL_FreeSurface(fsimg);
+          }
+        }
+        else
+        { 
+          SDL_BlitSurface(img, NULL, T4K_GetScreen(), NULL);
+        } 
+        SDL_FreeSurface(img);
       }
-      else
-      { 
-        SDL_BlitSurface(img, NULL, screen, NULL);
-      } 
-
-      SDL_FreeSurface(img);
     }
 
     /* --- go through all the items in the page --- */
@@ -1268,10 +1276,10 @@ static void run_script(void)
               switch (curItem->align)
               {
                 case 'r':
-                  loc.x = (screen->w) - (loc.w);
+                  loc.x = (T4K_GetScreen()->w) - (loc.w);
                   break;
                 case 'c':
-                  loc.x = ((screen->w) - (loc.w))/2;
+                  loc.x = ((T4K_GetScreen()->w) - (loc.w))/2;
                   break;
                 default:
                   loc.x = 0;
@@ -1280,7 +1288,7 @@ static void run_script(void)
             }
 
             /* --- and blit! --- */
-            SDL_BlitSurface(img, NULL, screen, &loc);
+            SDL_BlitSurface(img, NULL, T4K_GetScreen(), &loc);
 
             /* --- does it do click and play --- */
             if (curItem->onclick)
@@ -1305,15 +1313,18 @@ static void run_script(void)
           if (img)
           {
             /* hack: since this is the background it needs to scale when in fullscreen -MDT */
-            if (settings.fullscreen)
+            if (window && (SDL_GetWindowFlags(window) & SDL_WINDOW_FULLSCREEN))
             {
               SDL_Surface* fsimg = zoom(img, fs_res_x, fs_res_y);
-              SDL_BlitSurface(fsimg, NULL, screen, NULL);
-              SDL_FreeSurface(fsimg);
+              if (fsimg)
+              {
+                SDL_BlitSurface(fsimg, NULL, T4K_GetScreen(), NULL);
+                SDL_FreeSurface(fsimg);
+              }
             }
             else
             {
-              SDL_BlitSurface(img, NULL, screen, NULL);
+              SDL_BlitSurface(img, NULL, T4K_GetScreen(), NULL);
             }
             SDL_FreeSurface(img);
           }
@@ -1322,6 +1333,8 @@ static void run_script(void)
 
         case itemTEXT:
         {
+          if (!curItem->data)
+            break;
 		  /* Append each text line's to the lesson instruction */
           strcat(tts_buffer,curItem->data);
 	
@@ -1368,7 +1381,7 @@ static void run_script(void)
 
               if (img)
               { 
-                if (img->w + 20 < screen->w)
+                if (img->w + 20 < T4K_GetScreen()->w)
                   ok = 1;
                 SDL_FreeSurface(img);
                 img = NULL;
@@ -1400,10 +1413,10 @@ static void run_script(void)
                 switch (curItem->align)
                 {
                   case 'r':
-                    loc.x = (screen->w) - (loc.w);
+                    loc.x = (T4K_GetScreen()->w) - (loc.w);
                     break;
                   case 'c':
-                    loc.x = ((screen->w) - (loc.w))/2;
+                    loc.x = ((T4K_GetScreen()->w) - (loc.w))/2;
                     break;
                   default:
                     loc.x = 0;
@@ -1412,11 +1425,11 @@ static void run_script(void)
               }
 
               /* --- and blit! --- */
-              SDL_BlitSurface(img, NULL, screen, &loc);
+              SDL_BlitSurface(img, NULL, T4K_GetScreen(), &loc);
               SDL_FreeSurface(img);
             }
                     
-          } while (shown + 1 < strlen(curItem->data));
+          } while (curItem->data && shown + 1 < strlen(curItem->data));
           
 
           break;
@@ -1640,6 +1653,9 @@ static void run_script(void)
 
   } /* --- End of "while (curPage)" loop ----*/
 
+  if (tts_buffer)
+    free(tts_buffer);
+
   LOG("Leave run_script()\n");
 }
 
@@ -1713,10 +1729,14 @@ static void close_script(void)
 }
 
 
-/* NOTE we just check to see if the name ends in ".xml", but we don't */
-/* verify that it really contains XML.                                */
 static int is_xml_file(const struct dirent* xml_dirent)
 {
-  const char* ending = &xml_dirent->d_name[strlen(xml_dirent->d_name) - 4]; 
+  if (!xml_dirent || !xml_dirent->d_name)
+    return 0;
+  size_t len = strlen(xml_dirent->d_name);
+  if (len < 4)
+    return 0;
+  const char* ending = &xml_dirent->d_name[len - 4]; 
   return (0 == strncasecmp(ending, ".xml", 4));
 }
+
