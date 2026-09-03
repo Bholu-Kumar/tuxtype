@@ -463,6 +463,12 @@ int XMLLesson(void)
             if (loc + 1 < num_scripts)
               loc++;           
           }
+
+          if (event.key.key == SDLK_F5)
+            ToggleTTS();
+
+          if (event.key.key == SDLK_F9)
+            ToggleBraille();
       }
     }
 
@@ -1512,6 +1518,12 @@ static void run_script(void)
                       curPage = curPage->next;
                       skip = 1;
                       done = 1;
+                      break;
+                    case SDLK_F5:
+                      ToggleTTS();
+                      break;
+                    case SDLK_F9:
+                      ToggleBraille();
                       break;
                     default:
                       break;

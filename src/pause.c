@@ -124,6 +124,10 @@ int Pause(void)
 						if (event.key.key == SDLK_DOWN) 
 							mus_volume -= 4;
 					}
+					if (event.key.key == SDLK_F5)
+						ToggleTTS();
+					if (event.key.key == SDLK_F9)
+						ToggleBraille();
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_DOWN:
 					mousePressed = 1;

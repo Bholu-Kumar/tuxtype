@@ -319,6 +319,14 @@ int PlayCascade(int diflevel)
                 SDL_SaveBMP(screen, "screenshot.bmp");
                 break;
 
+              case SDLK_F5:
+                ToggleTTS();
+                break;
+
+              case SDLK_F9:
+                ToggleBraille();
+                break;
+
               case SDLK_F6:
                 settings.o_lives = settings.o_lives - 10;
                 curlives = curlives - 10;
@@ -699,7 +707,7 @@ static int check_word( int f ) {
 		return 0;
 
 	for (i=0; i < wcslen(fish_object[f].word); i++) 
-		if (fish_object[f].word[i] != tux_object.word[tux_object.wordlen -  wcslen(fish_object[f].word) + i])
+		if (towupper(fish_object[f].word[i]) != towupper(tux_object.word[tux_object.wordlen -  wcslen(fish_object[f].word) + i]))
 			return 0;
 
 	return 1;
@@ -1405,7 +1413,7 @@ static void DrawFish(int which)
       int k;
       for (k = 0; k < tux_object.wordlen - j; k++)
       {
-        if (fish_object[which].word[k] != tux_object.word[j + k]) 
+        if (towupper(fish_object[which].word[k]) != towupper(tux_object.word[j + k])) 
           k = 100000;
       }
 

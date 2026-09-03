@@ -908,8 +908,19 @@ void ShowMessage(int font_size, const char* str1, const char* str2,
                     }
                 case SDL_EVENT_KEY_DOWN:
                     {
-                        finished = 1;
-                        playsound(SND_TOCK);
+                        if (event.key.key == SDLK_F5)
+                        {
+                            ToggleTTS();
+                        }
+                        else if (event.key.key == SDLK_F9)
+                        {
+                            ToggleBraille();
+                        }
+                        else
+                        {
+                            finished = 1;
+                            playsound(SND_TOCK);
+                        }
                     }
             }
         }

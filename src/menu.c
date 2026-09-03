@@ -603,6 +603,12 @@ static int chooseWordlist(void)
             if (loc+1<lists)
               loc++;
           }
+
+          if (event.key.key == SDLK_F5)
+            ToggleTTS();
+
+          if (event.key.key == SDLK_F9)
+            ToggleBraille();
       }
     }
 

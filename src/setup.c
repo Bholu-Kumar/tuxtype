@@ -127,10 +127,13 @@ void GraphicsInit(void)
     exit(2);
   }
 
+  T4K_SetScreen(screen);
+
   //Set application's icon:
   seticon();
 
   InitBlitQueue();
+  T4K_InitBlitQueue();
 
   DEBUGCODE 
   {

@@ -36,11 +36,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 extern void SaveSettings(void);
 
 void ToggleTTS(void) {
+    fprintf(stderr, "ToggleTTS() called, current tts=%d\n", settings.tts);
+    fflush(stderr);
     if (settings.tts) {
         /* Say "disabled" BEFORE turning it off so we hear the confirmation */
         T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Text to speech disabled."));
         settings.tts = 0;
         text_to_speech_status = 0;
+        T4K_Tts_set_status(0);  /* sync DLL state */
     } else {
         char tts_lang[10] = {0};
         if (settings.use_english || settings.theme_locale_name[0] == '\0' ||
@@ -52,12 +55,15 @@ void ToggleTTS(void) {
         }
 
         if (!T4K_Tts_set_voice(tts_lang)) {
+            T4K_Tts_set_status(1);  /* need TTS ON to announce error */
             T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Tts is not available for this language. Tts disabled!"));
             settings.tts = 0;
             text_to_speech_status = 0;
+            T4K_Tts_set_status(0);
         } else {
             settings.tts = 1;
             text_to_speech_status = 1;
+            T4K_Tts_set_status(1);
             T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Text to speech enabled."));
         }
     }
@@ -65,12 +71,19 @@ void ToggleTTS(void) {
 }
 
 void ToggleBraille(void) {
+    fprintf(stderr, "ToggleBraille() called, current braille=%d, tts=%d\n", settings.braille, settings.tts);
+    fflush(stderr);
     if (settings.braille == 1) {
         settings.braille = 0;
+        /* Force TTS status to 1 temporarily so the announcement is heard */
+        T4K_Tts_set_status(1);
         T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Braille output disabled"));
+        T4K_Tts_set_status(settings.tts);
     } else {
         settings.braille = 1;
+        T4K_Tts_set_status(1);
         T4K_Tts_say(DEFAULT_VALUE, DEFAULT_VALUE, INTERRUPT, _("Braille output enabled"));
+        T4K_Tts_set_status(settings.tts);
     }
     SaveSettings();
 }

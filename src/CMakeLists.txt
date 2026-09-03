@@ -81,6 +81,10 @@ target_compile_definitions(${EXE_NAME} PRIVATE
     DEBUG
 )
 
+if(MINGW)
+    target_compile_definitions(${EXE_NAME} PRIVATE HAVE_PUTENV=1)
+endif()
+
 if(WITH_ESPEAK)
     target_compile_definitions(${EXE_NAME} PRIVATE
         WITH_ESPEAK=1
@@ -166,9 +170,9 @@ if(MINGW)
         uuid ole32 wsock32 shlwapi
     )
     # -mwindows: suppresses the console window in the final .exe
-    set_target_properties(${EXE_NAME} PROPERTIES
-        LINK_FLAGS "-mwindows"
-    )
+    # set_target_properties(${EXE_NAME} PROPERTIES
+    #     LINK_FLAGS "-mwindows"
+    # )
 endif()
 
 # On Linux/Mac, link math library
@@ -202,3 +206,15 @@ endif()
 # Install
 # -------------------------------------------------------------------
 install(TARGETS ${EXE_NAME} DESTINATION bin)
+
+# -------------------------------------------------------------------
+# Copy data folder on Windows so it can be run from the build directory
+# -------------------------------------------------------------------
+if(WIN32)
+    add_custom_command(TARGET ${EXE_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_SOURCE_DIR}/data"
+        "$<TARGET_FILE_DIR:${EXE_NAME}>/data"
+        COMMENT "Copying data folder to output directory..."
+    )
+endif()

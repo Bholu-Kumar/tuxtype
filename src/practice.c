@@ -414,6 +414,14 @@ int Phrases(wchar_t* pphrase )
             state = 1;
             break;
 
+          case  SDLK_F5:
+            ToggleTTS();
+            break;
+
+          case  SDLK_F9:
+            ToggleBraille();
+            break;
+
           case  SDLK_DOWN: //practice next phase in list
             if (cur_phrase < num_phrases - 1)
             {

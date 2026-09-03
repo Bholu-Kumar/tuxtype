@@ -192,6 +192,9 @@ int main(int argc, char *argv[])
 
   lib_flags |= SDL_INIT_AUDIO;
 
+  /* Init espeak-ng FIRST so it opens its audio path before SDL3_mixer. */
+  T4K_Tts_init();
+
   LibInit(lib_flags); /* calls SDL_Init(), TTF_Init(), some other settings */
   GraphicsInit(); /* calls SDL_SetVideoMode(), a few others     */
 
@@ -202,11 +205,11 @@ int main(int argc, char *argv[])
   }
   
   
-  /* Initialising TTS */
-   T4K_Tts_init();
-   T4K_Tts_set_volume(settings.tts_volume);
-   T4K_OnAccessibilityToggle(ToggleTTS, ToggleBraille);
-   
+  /* TTS already initialised above; set volume/status/callbacks now that SDL is ready */
+  T4K_Tts_set_volume(settings.tts_volume);
+  T4K_Tts_set_status(settings.tts);
+  T4K_OnAccessibilityToggle(ToggleTTS, ToggleBraille);
+
    T4K_AddDataPrefix(DATA_PREFIX);
   
   /* FIXME: we should check config files/environment variables like LANG! */
