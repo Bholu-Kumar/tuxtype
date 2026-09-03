@@ -38,6 +38,12 @@ static SDL_Surface* fullscr_bkgd = NULL;
 int braille_language_loader(const char* file_name);
 
 /* Local function prototypes: */
+#ifdef max
+#undef max
+#endif
+#ifdef min
+#undef min
+#endif
 static int max(int n1, int n2);
 //static SDL_Surface* flip(SDL_Surface *in, int x, int y);
 

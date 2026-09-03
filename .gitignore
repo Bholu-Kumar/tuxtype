@@ -40,6 +40,7 @@ install-sh
 
 # Ignore any untracked files under build/ or buildw32/
 build/
+build-*/
 buildw32/
 
 # But don't ignore crossbuild scripts:

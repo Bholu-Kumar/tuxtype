@@ -36,7 +36,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 // Autoheader-derived defs in here:
 #include "config.h"
-
 // C library includes:
 #include <string.h>
 #include <wchar.h>
@@ -47,6 +46,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include <sys/stat.h>
 #include <dirent.h>
 #include <locale.h>
+#include <ctype.h>
+
+#include "compiler.h"
 
 // SDL & t4kcommon includes:
 #include <SDL3/SDL.h>
@@ -196,6 +198,9 @@ extern int fs_res_y;
  */
 
 #define LOG( str ) if (settings.debug_on) fprintf( stderr, str );
+#ifdef DEBUGCODE
+#undef DEBUGCODE
+#endif
 #define DEBUGCODE if (settings.debug_on) 
 #define DOUT(x) if (settings.debug_on) fprintf(stderr, "%s = %d\n", #x, x);
 
