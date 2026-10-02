@@ -355,6 +355,21 @@ static int load_settings_fp(FILE* fp)
       text_to_speech_status = settings.tts;
       setting_found = 1;
     }
+    else if (strncmp(setting, "tts_rate", FNLEN) == 0)
+    {
+      DEBUGCODE {fprintf(stderr, "LoadSettings: Setting tts_rate to %s\n", value);}
+      settings.tts_rate = atoi(value);
+      /* Migrate legacy 0-100 values if present */
+      if (settings.tts_rate > 4) {
+        if (settings.tts_rate <= 30)      settings.tts_rate = 0;
+        else if (settings.tts_rate <= 45) settings.tts_rate = 1;
+        else if (settings.tts_rate <= 60) settings.tts_rate = 2;
+        else if (settings.tts_rate <= 80) settings.tts_rate = 3;
+        else                              settings.tts_rate = 4;
+      }
+      if (settings.tts_rate < 0) settings.tts_rate = 0;
+      setting_found = 1;
+    }
     else if (strncmp(setting, "braille", FNLEN) == 0)
     {
       DEBUGCODE {fprintf(stderr, "LoadSettings: Setting braille to %s\n", value);}
@@ -430,6 +445,7 @@ void SaveSettings(void)
 	fprintf( settingsFile, "fullscreen=%d\n", settings.fullscreen);
 	fprintf( settingsFile, "tts_volume=%d\n", settings.tts_volume);
 	fprintf( settingsFile, "tts=%d\n", settings.tts);
+	fprintf( settingsFile, "tts_rate=%d\n", settings.tts_rate);
 	fprintf( settingsFile, "braille=%d\n", settings.braille);
 
 

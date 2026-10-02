@@ -225,6 +225,7 @@ int main(int argc, char *argv[])
   
   /* TTS already initialised above; set volume/status/callbacks now that SDL is ready */
   T4K_Tts_set_volume(settings.tts_volume);
+  set_speech_rate(settings.tts_rate);
   T4K_Tts_set_status(settings.tts);
   T4K_OnAccessibilityToggle(ToggleTTS, ToggleBraille);
 

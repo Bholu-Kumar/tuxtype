@@ -34,14 +34,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 static Mix_Chunk *pause_sfx = NULL;
 static SDL_Surface *up = NULL, *down = NULL, *left = NULL, *right = NULL;
+static SDL_Surface *pause_bkg = NULL;
 static SDL_Rect rectUp, rectDown, rectLeft, rectRight;
+/* rects for the speech-rate row +/- buttons and bar hit-test */
+static SDL_Rect rectSrateUp, rectSrateDown_btn, rectSrateDown;
 const int pause_font_size1 = 24;
 const int pause_font_size2 = 36;
 
 
 /* Local function prototypes: */
-static void draw_vols(int sfx, int mus);
-static void pause_draw(void);
+static void draw_vols(int sfx, int mus, int tts_rate);
+static void pause_draw(int tts_rate);
 static void pause_load_media(void);
 static void pause_unload_media(void);
 
@@ -57,6 +60,8 @@ int Pause(void)
 	int old_sfx_volume;
 	int mus_volume=0;
 	int old_mus_volume;
+	int tts_rate=0;
+	int old_tts_rate;
 	int mousePressed = 0;
 	int quit=0;
 	int tocks=0;  // used for keeping track of when a tock has happened
@@ -73,6 +78,9 @@ int Pause(void)
 		sfx_volume = Mix_Volume(-1, -1);  // get sfx volume w/o changing it
 		mus_volume = Mix_VolumeMusic(-1); // get mus volume w/o changing it
 	}
+	tts_rate = settings.tts_rate; /* current speech rate level (0-4) */
+	if (tts_rate < 0) tts_rate = 0;
+	if (tts_rate > 4) tts_rate = 4;
 
 	/* --- show the pause screen --- */
 
@@ -80,11 +88,18 @@ int Pause(void)
 
 	// Darken the screen...
 	DarkenScreen(1); 
+	if (pause_bkg) {
+		SDL_FreeSurface(pause_bkg);
+	}
+	pause_bkg = SDL_DuplicateSurface(screen);
+	if (pause_bkg) {
+		SDL_SetSurfaceBlendMode(pause_bkg, SDL_BLENDMODE_NONE);
+	}
 
-	pause_draw();
+	pause_draw(tts_rate);
 
 	if (settings.sys_sound) {
-		draw_vols(sfx_volume, mus_volume);
+		draw_vols(sfx_volume, mus_volume, tts_rate);
 	}
 
 	T4K_PresentScreen();
@@ -96,6 +111,7 @@ int Pause(void)
 	while (paused) {
 		old_sfx_volume = sfx_volume;
 		old_mus_volume = mus_volume;
+		old_tts_rate   = tts_rate;
 		while (SDL_PollEvent(&event)) 
 			switch (event.type) {
 				case SDL_EVENT_QUIT: 
@@ -123,6 +139,10 @@ int Pause(void)
 							mus_volume += 4;
 						if (event.key.key == SDLK_DOWN) 
 							mus_volume -= 4;
+						if (event.key.key == SDLK_PAGEUP) 
+							tts_rate++;
+						if (event.key.key == SDLK_PAGEDOWN) 
+							tts_rate--;
 					}
 					if (event.key.key == SDLK_F5)
 						ToggleTTS();
@@ -135,8 +155,6 @@ int Pause(void)
 					break;
 				case SDL_EVENT_MOUSE_BUTTON_UP:
 					mousePressed = 0;
-					break;
-
 					break;
 			}
 		if (settings.sys_sound && mousePressed) {
@@ -165,6 +183,21 @@ int Pause(void)
 						mus_volume = 4+(int)(128.0 * ((x - rectLeft.x - rectLeft.w - 1.0) / (rectRight.x - rectLeft.x - rectLeft.w - 2.0)));
 					}
 
+					/* Speech-rate bar: spans the same x-range, mapped to 5 discrete levels */
+					if ((y >= rectSrateDown.y) && (y <= rectSrateDown.y + rectSrateDown.h)) {
+						float ratio = (float)(x - (rectLeft.x + rectLeft.w + 1)) / (float)(rectRight.x - rectLeft.x - rectLeft.w - 2);
+						if (ratio < 0.0f) ratio = 0.0f;
+						if (ratio > 1.0f) ratio = 1.0f;
+						tts_rate = (int)(ratio * 5.0f);
+						if (tts_rate > 4) tts_rate = 4;
+					}
+				}
+				/* +/- arrow buttons for speech rate */
+				if (inRect(rectSrateUp, x, y)) {
+					tts_rate++;
+				}
+				if (inRect(rectSrateDown_btn, x, y)) {
+					tts_rate--;
 				}
 			}
 		}
@@ -179,6 +212,8 @@ int Pause(void)
 				mus_volume = MIX_MAX_VOLUME;
 			if (mus_volume < 0)
 				mus_volume = 0;
+			if (tts_rate > 4) tts_rate = 4;
+			if (tts_rate < 0) tts_rate = 0;
 
 			if ((mus_volume != old_mus_volume) || 
 			    (sfx_volume != old_sfx_volume)) {
@@ -193,9 +228,19 @@ int Pause(void)
 					tocks++;
 			    }
 
-				draw_vols(sfx_volume, mus_volume);
+				pause_draw(tts_rate);
+				draw_vols(sfx_volume, mus_volume, tts_rate);
 				settings.mus_volume=mus_volume;
 				settings.sfx_volume=sfx_volume;
+				T4K_PresentScreen();
+			}
+
+			if (tts_rate != old_tts_rate) {
+				set_speech_rate(tts_rate);
+				pause_draw(tts_rate);
+				draw_vols(sfx_volume, mus_volume, tts_rate);
+				/* play preview at newly selected rate */
+				T4K_Tts_say(get_speech_rate_raw(tts_rate), DEFAULT_VALUE, INTERRUPT, _("Speech rate %s"), get_speech_rate_label(tts_rate));
 				T4K_PresentScreen();
 			}
 		}
@@ -225,18 +270,14 @@ int Pause(void)
 static void pause_load_media(void) {
 	if (settings.sys_sound) 
 		pause_sfx = LoadSound( "tock.wav" );
-
 	up = LoadImage("up.png", IMG_ALPHA);
-	rectUp.w = up->w; rectUp.h = up->h;
-
+	if (up) { rectUp.w = up->w; rectUp.h = up->h; }
 	down = LoadImage("down.png", IMG_ALPHA);
-	rectDown.w = down->w; rectDown.h = down->h;
-
+	if (down) { rectDown.w = down->w; rectDown.h = down->h; }
 	left = LoadImage("left.png", IMG_ALPHA);
-	rectLeft.w = left->w; rectLeft.h = left->h;
-
+	if (left) { rectLeft.w = left->w; rectLeft.h = left->h; }
 	right = LoadImage("right.png", IMG_ALPHA);
-	rectRight.w = right->w; rectRight.h = right->h;
+	if (right) { rectRight.w = right->w; rectRight.h = right->h; }
 
 //	f1 = LoadFont(settings.theme_font_name, 24);
 //	f2 = LoadFont(settings.theme_font_name, 36);
@@ -244,48 +285,67 @@ static void pause_load_media(void) {
 
 static void pause_unload_media(void) {
 	if (settings.sys_sound)
-        {
-	  Mix_FreeChunk(pause_sfx);
-	  pause_sfx = NULL;
-        }
+	{
+		Mix_FreeChunk(pause_sfx);
+		pause_sfx = NULL;
+	}
+	if (pause_bkg)
+	{
+		SDL_FreeSurface(pause_bkg);
+		pause_bkg = NULL;
+	}
 	SDL_FreeSurface(up);
 	SDL_FreeSurface(down);
 	SDL_FreeSurface(left);
 	SDL_FreeSurface(right);
-        up = down = left = right = NULL;
+	up = down = left = right = NULL;
 }
 
 
 
-/******************************************/
-/*                                        */
-/*       Local ("private") functions      */
-/*                                        */
-/******************************************/
-
-
-
-static void pause_draw(void)
+static void pause_draw(int tts_rate)
 {
   SDL_Rect s;
   SDL_Surface* t = NULL;
+  SDL_Color white  = {255, 255, 255, 255};
 
   LOG("Entering pause_draw()\n");
 
-  rectLeft.y = rectRight.y = screen->h/2 - 40;
-  rectDown.y = rectUp.y = screen->h/2 + 60;
+  if (pause_bkg) {
+    SDL_SetSurfaceBlendMode(pause_bkg, SDL_BLENDMODE_NONE);
+    SDL_BlitSurface(pause_bkg, NULL, screen, NULL);
+  }
+
+  /* Well-spaced layout avoiding overlaps */
+  rectLeft.y = rectRight.y = screen->h/2 - 120;
+  rectDown.y = rectUp.y    = screen->h/2 - 45;
+  rectSrateDown_btn.y = rectSrateUp.y = screen->h/2 + 30;
+  rectSrateDown.y                     = screen->h/2 + 30;
 
   rectLeft.x = rectDown.x = screen->w/2 - (7*16) - rectLeft.w - 4;
   rectRight.x = rectUp.x  = screen->w/2 + (7*16) + 4;
 
-  /* Avoid segfault if any needed SDL_Surfaces missing: */
-  if (settings.sys_sound
-    && left && right && down && up)
+  rectSrateDown_btn.w = rectLeft.w;
+  rectSrateDown_btn.h = rectLeft.h;
+  rectSrateUp.w       = rectLeft.w;
+  rectSrateUp.h       = rectLeft.h;
+  rectSrateDown.w     = rectLeft.w;
+  rectSrateDown.h     = rectLeft.h;
+
+  rectSrateDown_btn.x = rectLeft.x;
+  rectSrateUp.x       = rectRight.x;
+  rectSrateDown.x     = rectLeft.x;
+
+  /* Blit arrows showing how to adjust each option: */
+  if (settings.sys_sound)
   {
-    SDL_BlitSurface(left, NULL, screen, &rectLeft);
-    SDL_BlitSurface(right, NULL, screen, &rectRight);
-    SDL_BlitSurface(down, NULL, screen, &rectDown);
-    SDL_BlitSurface(up, NULL, screen, &rectUp);
+    if (left)  SDL_BlitSurface(left,  NULL, screen, &rectLeft);
+    if (right) SDL_BlitSurface(right, NULL, screen, &rectRight);
+    if (down)  SDL_BlitSurface(down,  NULL, screen, &rectDown);
+    if (up)    SDL_BlitSurface(up,    NULL, screen, &rectUp);
+    /* left/right arrows for the speech-rate row */
+    if (left)  SDL_BlitSurface(left,  NULL, screen, &rectSrateDown_btn);
+    if (right) SDL_BlitSurface(right, NULL, screen, &rectSrateUp);
   }
 
   if (settings.sys_sound)
@@ -293,7 +353,7 @@ static void pause_draw(void)
     t = BlackOutline(_("Sound Effects Volume"), pause_font_size1, &white);
     if (t)
     {	
-      s.y = screen->h/2 - 80;
+      s.y = rectLeft.y - 35;
       s.x = screen->w/2 - t->w/2;
       SDL_BlitSurface(t, NULL, screen, &s);
       SDL_FreeSurface(t);
@@ -302,18 +362,18 @@ static void pause_draw(void)
     t = BlackOutline(gettext("Music Volume"), pause_font_size1, &white);
     if (t)
     {
-      s.y = screen->h/2 + 20;
+      s.y = rectDown.y - 35;
       s.x = screen->w/2 - t->w/2;
       SDL_BlitSurface(t, NULL, screen, &s);
       SDL_FreeSurface(t);
     }
-  }
-  else  /* No sound: */
-  {
-    t = BlackOutline(gettext("Sound & Music Disabled"), pause_font_size1, &white);
+
+    char srate_buf[64];
+    snprintf(srate_buf, sizeof(srate_buf), "%s: %s", _("Speech Rate"), get_speech_rate_label(tts_rate));
+    t = BlackOutline(srate_buf, pause_font_size1, &white);
     if (t)
     {
-      s.y = screen->h/2 - 80;
+      s.y = rectSrateDown.y - 35;
       s.x = screen->w/2 - t->w/2;
       SDL_BlitSurface(t, NULL, screen, &s);
       SDL_FreeSurface(t);
@@ -323,7 +383,7 @@ static void pause_draw(void)
   t = BlackOutline(gettext("Paused!"), pause_font_size2, &white);
   if (t)
   {
-	s.y = screen->h/2 - 180; //60;
+	s.y = screen->h/2 - 195;
 	s.x = screen->w/2 - t->w/2;
 	SDL_BlitSurface(t, NULL, screen, &s);
 	SDL_FreeSurface(t);
@@ -332,7 +392,7 @@ static void pause_draw(void)
   t = BlackOutline(gettext("Press escape again to return to menu"), pause_font_size1, &white);
   if (t)
   {
-    s.y = screen->h/2 + 160;
+    s.y = screen->h/2 + 130;
     s.x = screen->w/2 - t->w/2;
     SDL_BlitSurface(t, NULL, screen, &s);
     SDL_FreeSurface(t);
@@ -341,7 +401,7 @@ static void pause_draw(void)
   t = BlackOutline(gettext("Press space bar to return to game"), pause_font_size1, &white);
   if (t)
   {
-    s.y = screen->h/2 + 200;
+    s.y = screen->h/2 + 165;
     s.x = screen->w/2 - t->w/2;
     SDL_BlitSurface(t, NULL, screen, &s);
     SDL_FreeSurface(t);
@@ -352,17 +412,23 @@ static void pause_draw(void)
 
 
 /* FIXME what if rectLeft and rectDown not initialized? - should be args */
-static void draw_vols(int sfx, int mus)
+static void draw_vols(int sfx, int mus, int tts_rate)
 {
-  SDL_Rect s,m;
+  static const int srate_segs[5] = { 6, 13, 19, 26, 32 };
+  SDL_Rect s, m, r;
   int i;
+
+  if (tts_rate < 0) tts_rate = 0;
+  if (tts_rate > 4) tts_rate = 4;
 
   s.y = rectLeft.y; 
   m.y = rectDown.y;
-  m.w = s.w = 5;
+  r.y = rectSrateDown.y;  /* speech-rate bar row */
+  m.w = s.w = r.w = 5;
   s.x = rectLeft.x + rectLeft.w + 5;
   m.x = rectDown.x + rectDown.w + 5;
-  m.h = s.h = 40;
+  r.x = rectSrateDown_btn.x + rectSrateDown_btn.w + 5;
+  m.h = s.h = r.h = 40;
 
   for (i = 1; i<=32; i++)
   {
@@ -376,8 +442,12 @@ static void draw_vols(int sfx, int mus)
     else
       SDL_FillRect(screen, &m, SDL_MapSurfaceRGB(screen, 0, 0, 0));
 
-    m.x = s.x += 7;
+    /* speech rate bar: 5 discrete levels (0.5, 0.75, 1, 1.25, 1.5) */
+    if (i <= srate_segs[tts_rate])
+      SDL_FillRect(screen, &r, SDL_MapSurfaceRGB(screen, 0, 180 + tts_rate * 15, 0));
+    else
+      SDL_FillRect(screen, &r, SDL_MapSurfaceRGB(screen, 0, 0, 0));
+
+    r.x = m.x = s.x += 7;
   }
 }
-
-

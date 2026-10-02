@@ -106,6 +106,39 @@ void ToggleBraille(void) {
     SaveSettings();
 }
 
+/* Speech rate discrete levels: 0.5x, 0.75x, 1x, 1.25x, 1.5x */
+static const int espeak_rates[5] = { 4, 17, 30, 43, 56 };
+static const char* const speech_rate_labels[5] = { "0.5x", "0.75x", "1x", "1.25x", "1.5x" };
+
+const char* get_speech_rate_label(int level)
+{
+    if (level < 0) level = 0;
+    if (level > 4) level = 4;
+    return speech_rate_labels[level];
+}
+
+int get_speech_rate_raw(int level)
+{
+    if (level < 0) level = 0;
+    if (level > 4) level = 4;
+#ifdef HAVE_LIBSPEECHD
+    {
+        static const int spd_rates[5] = { -50, -25, 0, 25, 50 };
+        return spd_rates[level];
+    }
+#else
+    return espeak_rates[level];
+#endif
+}
+
+void set_speech_rate(int level)
+{
+    if (level < 0) level = 0;
+    if (level > 4) level = 4;
+    settings.tts_rate = level;
+    T4K_Tts_set_rate(get_speech_rate_raw(level));
+}
+
 #include "SDL_extras.h"
 #include "pixels.h"
 //Just need funcs.h for CurrentBkgd()
