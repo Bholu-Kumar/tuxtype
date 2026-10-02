@@ -116,6 +116,7 @@ typedef struct game_option_type{
   int braille;
   int tts;
   int tts_volume;
+  int tts_rate;   /* speech rate level: 0=0.5, 1=0.75, 2=1.0, 3=1.25, 4=1.5 */
   int sfx_volume;
   int mus_volume;
   int menu_music;
@@ -154,6 +155,8 @@ extern struct braille_dict braille_key_value_map[100];
 #define DEFAULT_BRAILLE 0
 #define DEFAULT_TTS 0
 #define DEFAULT_TTS_VOLUME 100
+#define DEFAULT_TTS_RATE 2   /* 2 = 1.0x (normal speed) */
+#define NUM_TTS_RATES 5
 #define DEFAULT_SYS_SOUND 1
 #define DEFAULT_SFX_VOLUME 100
 #define DEFAULT_MUS_VOLUME 100
