@@ -310,17 +310,22 @@ int Phrases(wchar_t* pphrase )
         }
         
         //Announce the word with re-draw
+        /* Fix: Don't pass raw phrase wchar_t (contains literal spaces that TTS reads
+         * aloud as the word "space"). Instead announce word + letter-by-letter spelling,
+         * matching how cascade/comet mode announces words. */
         if (pphrase == NULL){
 			//For phrase typing
 			if (cursor == 0){
+				/* First word of a new phrase: say word name then spell it out */
 				T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,
-				"%S %S %S",phrases[cur_phrase],get_next_word(cur_phrase,cursor),
+				"%S. %S",get_next_word(cur_phrase,cursor),
 				get_next_word_letters(cur_phrase,cursor,1));
 			}
 			else
 			{
+				/* Mid-phrase: say next word name then spell remaining letters */
 				T4K_Tts_say(DEFAULT_VALUE,DEFAULT_VALUE,INTERRUPT,
-				"%S %S",get_next_word(cur_phrase,cursor),
+				"%S. %S",get_next_word(cur_phrase,cursor),
 				get_next_word_letters(cur_phrase,cursor,1));
 			}	 
 		}
@@ -1825,26 +1830,39 @@ wchar_t *get_next_word_letters(int cur_phrase,int cursor,int till_next_space)
 		}		
 		else
 		{
+			/* Use space-only separator (period caused eSpeak to say "dot").
+			 * For 'a'/'A': use phoneme [[eI]] so eSpeak says the letter name
+			 * "ay" instead of the article "a" (schwa). Requires espeakPHONEMES
+			 * flag in t4k_tts.c (which is now set). */
 			iter = wcslen(temp);
-			temp[iter++] = L' ';
 			if(iswupper(phrases[cur_phrase][i]))
 			{
 				temp[iter] = L'\0';	
-				wcscat(temp,L"Capitol ");
-				iter+=8;
+				wcscat(temp,L"Capital ");
+				iter = wcslen(temp);
 			}
-			temp[iter++] = phrases[cur_phrase][i];
-			temp[iter++] = L' ';
-			temp[iter] = L'\0';	
+			if (towlower(phrases[cur_phrase][i]) == L'a')
+			{
+				wcscat(temp, L"[[eI]] ");
+				iter = wcslen(temp);
+			}
+			else
+			{
+				temp[iter++] = phrases[cur_phrase][i];
+				temp[iter++] = L' ';
+				temp[iter] = L'\0';
+			}
 		}
 		
 		if (till_next_space == 0)
 			break;
 	}
-	//Add space if any
+	/* Fix: Replace the literal word "Space" with spoken cue "space." so
+	 * TTS announces the coming space naturally instead of the word "Space"
+	 * being shouted mid-sentence. */
 	if (phrases[cur_phrase][i] == L' ')
 	{
-			wcscat(temp,L" Space");
+			wcscat(temp,L"space.");
 	}
 	
 	return temp;				

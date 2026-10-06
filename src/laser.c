@@ -36,6 +36,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void arrange_in_order(wchar_t* str);
 
+/* tts_letter_token: appends the TTS-friendly token for one letter to dest.
+ * - For 'a'/'A': uses eSpeak phoneme notation [[eI]] so the letter name "ay"
+ *   is pronounced correctly instead of the article "a" (schwa).
+ * - For all other letters: appends the character followed by a space.
+ *   (Period separator removed — eSpeak reads '.' as "dot" in letter lists.)
+ * dest must have sufficient space remaining. */
+static void tts_letter_token(wchar_t *dest, wchar_t ch)
+{
+	if (ch == L'a' || ch == L'A')
+	{
+		wcscat(dest, L"[[eI]] ");
+	}
+	else
+	{
+		int n = wcslen(dest);
+		dest[n++] = ch;
+		dest[n++] = L' ';
+		dest[n]   = L'\0';
+	}
+}
+
 
 #define FPS (1000 / 15)   /* 15 fps max */
 #define CITY_EXPL_START 3 * 5  /* Must be mult. of 5 (number of expl frames) */
@@ -1343,13 +1364,11 @@ static int tts_announcer(void *unused)
 		{
 			for(i=comets[lowest].pos;i<wcslen(comets[lowest].word);i++)
 			{
-				buffer[iter]=L'.';iter++;
-				buffer[iter]=L' ';iter++;				
-				buffer[iter]=comets[lowest].word[i];iter++;
+				buffer[iter] = L'\0';
+				tts_letter_token(buffer, comets[lowest].word[i]);
+				iter = wcslen(buffer);
 			}
 		}
-		buffer[iter]=L'.';iter++;
-		buffer[iter]=L' ';iter++;		
 		buffer[iter] = L'\0';
 
 		pitch_and_rate = ((lowest_y*100)/(screen->h - images[IMG_CITY_BLUE]->h));
