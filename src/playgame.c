@@ -39,6 +39,27 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 void arrange_in_order(wchar_t* str);
 
+/* tts_letter_token: appends the TTS-friendly token for one letter to dest.
+ * - For 'a'/'A': uses eSpeak phoneme notation [[eI]] so the letter name "ay"
+ *   is pronounced correctly instead of the article "a" (schwa).
+ * - For all other letters: appends the character followed by a space.
+ *   (Period separator removed — eSpeak reads '.' as "dot" in letter lists.)
+ * dest must have sufficient space remaining. */
+static void tts_letter_token(wchar_t *dest, wchar_t ch)
+{
+	if (ch == L'a' || ch == L'A')
+	{
+		wcscat(dest, L"[[eI]] ");
+	}
+	else
+	{
+		int n = wcslen(dest);
+		dest[n++] = ch;
+		dest[n++] = L' ';
+		dest[n]   = L'\0';
+	}
+}
+
 
 /* Should these be constants? */
 static int tux_max_width = 0;                // the max width of the images of tux
@@ -1903,9 +1924,9 @@ static int tts_announcer(void *struct_address)
 				{
 					for(j=0;j<wcslen(fish_object[fish_object_positions[i]].word);j++)
 					{
-						buffer[iter] = fish_object[fish_object_positions[i]].word[j];iter++;
-						buffer[iter] = L'.';iter++;
-						buffer[iter] = L' ';iter++;
+						buffer[iter] = L'\0';
+						tts_letter_token(buffer, fish_object[fish_object_positions[i]].word[j]);
+						iter = wcslen(buffer);
 					}
 				}
 				//If not ended with '\0' it will say grabage values also
@@ -1940,9 +1961,9 @@ static int tts_announcer(void *struct_address)
 				{
 					for(j=0;j<wcslen(fish_object[fish_object_positions[i]].word);j++)
 					{
-						buffer[iter] = fish_object[fish_object_positions[i]].word[j];iter++;
-						buffer[iter] = L'.';iter++;
-						buffer[iter] = L' ';iter++;
+						buffer[iter] = L'\0';
+						tts_letter_token(buffer, fish_object[fish_object_positions[i]].word[j]);
+						iter = wcslen(buffer);
 					}
 				}
 				//If not ended with '\0' it will say grabage values also
@@ -2013,9 +2034,9 @@ static int tts_announcer(void *struct_address)
 					for(j=correct_position;j<wcslen(fish_object[which].word);j++)
 					{
 						//Skipping if the letter is in orange color. if not it will be appended
-						buffer[iter] = fish_object[which].word[j];iter++;
-						buffer[iter] = L'.';iter++;
-						buffer[iter] = L' ';iter++;
+						buffer[iter] = L'\0';
+						tts_letter_token(buffer, fish_object[which].word[j]);
+						iter = wcslen(buffer);
 					}
 				}
 				//If not ended with '\0' it will say grabage values also

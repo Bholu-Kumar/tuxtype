@@ -1830,9 +1830,10 @@ wchar_t *get_next_word_letters(int cur_phrase,int cursor,int till_next_space)
 		}		
 		else
 		{
-			/* Fix: Use "letter. " format (period+space) matching cascade/comet style.
-			 * Previously used " letter " which caused TTS to stutter and read
-			 * the trailing word boundary as the spoken word "space". */
+			/* Use space-only separator (period caused eSpeak to say "dot").
+			 * For 'a'/'A': use phoneme [[eI]] so eSpeak says the letter name
+			 * "ay" instead of the article "a" (schwa). Requires espeakPHONEMES
+			 * flag in t4k_tts.c (which is now set). */
 			iter = wcslen(temp);
 			if(iswupper(phrases[cur_phrase][i]))
 			{
@@ -1840,10 +1841,17 @@ wchar_t *get_next_word_letters(int cur_phrase,int cursor,int till_next_space)
 				wcscat(temp,L"Capital ");
 				iter = wcslen(temp);
 			}
-			temp[iter++] = phrases[cur_phrase][i];
-			temp[iter++] = L'.';	/* period acts as natural pause/separator for TTS */
-			temp[iter++] = L' ';
-			temp[iter] = L'\0';	
+			if (towlower(phrases[cur_phrase][i]) == L'a')
+			{
+				wcscat(temp, L"[[eI]] ");
+				iter = wcslen(temp);
+			}
+			else
+			{
+				temp[iter++] = phrases[cur_phrase][i];
+				temp[iter++] = L' ';
+				temp[iter] = L'\0';
+			}
 		}
 		
 		if (till_next_space == 0)
