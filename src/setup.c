@@ -683,6 +683,7 @@ static void seticon(void)
 
 void Cleanup(void)
 {
+  T4K_Tts_cleanup();
   if (screen)
   {
     SDL_DestroySurface(screen);

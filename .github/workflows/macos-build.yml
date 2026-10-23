@@ -5,6 +5,7 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -14,7 +15,7 @@ jobs:
     - name: Install Dependencies
       run: |
         brew update
-        brew install cmake pkg-config dylibbundler gettext libpng libxml2 librsvg espeak-ng \
+        brew install cmake pkg-config dylibbundler gettext libpng libxml2 librsvg cairo espeak-ng \
           sdl3 sdl3_image sdl3_ttf sdl3_mixer
 
     - name: Checkout tuxtype
@@ -26,6 +27,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: Midhun-M-git/t4kcommon
+        ref: master
         path: t4kcommon
 
     - name: Build and Install t4kcommon

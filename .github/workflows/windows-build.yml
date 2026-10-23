@@ -5,6 +5,7 @@ on:
     branches: [ "master" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -28,6 +29,10 @@ jobs:
           mingw-w64-ucrt-x86_64-sdl3-mixer
           mingw-w64-ucrt-x86_64-sdl3-ttf
           mingw-w64-ucrt-x86_64-librsvg
+          mingw-w64-ucrt-x86_64-cairo
+          mingw-w64-ucrt-x86_64-libpng
+          mingw-w64-ucrt-x86_64-zlib
+          mingw-w64-ucrt-x86_64-espeak-ng
           mingw-w64-ucrt-x86_64-libxml2
           mingw-w64-ucrt-x86_64-gettext
           make
@@ -41,6 +46,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         repository: Midhun-M-git/t4kcommon
+        ref: master
         path: t4kcommon
 
     - name: Build and Install t4kcommon
